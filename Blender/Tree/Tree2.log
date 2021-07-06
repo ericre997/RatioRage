@@ -1,0 +1,47 @@
+Exporter version: 2.93.1, Blender version: 2.93.0
+========= Conversion from Blender to Babylon.js =========
+	Scene settings used :
+		Inline textures     :  false
+		Material Type       :  PBR
+		Positions Precision :  4
+		Normals Precision   :  3
+		UVs Precision       :  3
+		Vert Color Precision:  3
+		Mat Weight Precision:  2
+		Keep Z-up r-handed  :  no
+		Texture directory   :  D:\Projects\Games\Ratio Rage\Blender\Tree\
+	Python World class constructor completed
+	processing begun of camera (UniversalCamera):  Camera
+	processing begun of mesh:  PalmTree
+		processing begun of material:  bark
+		processing begun of material:  leaf
+			WARNING: Metal channel baking required, but not possible, ignored
+			WARNING: Roughness channel baking required, but not possible, ignored
+			WARNING: Refraction channel baking required, but not possible, ignored
+			Baking texture, type: DIFFUSE, mapped using: BakingUV
+			processing texture PalmTree_baked_DIFFUSE
+				texture type:  diffuseTexture, mapped using: "BakingUV"
+			Diffuse / albeto channel baked
+			Baking texture, type: EMIT, mapped using: BakingUV
+			processing texture PalmTree_baked_EMIT
+				texture type:  emissiveTexture, mapped using: "BakingUV"
+			emissive channel baked
+			Baking texture, type: GLOSSY, mapped using: BakingUV
+			processing texture PalmTree_baked_GLOSSY
+				texture type:  specularTexture, mapped using: "BakingUV"
+			specular channel baked
+			bake time:  0 min, 18.9414 secs
+		num positions      :  18640
+		num normals        :  18640
+		num tangents       :  0
+		num uvs            :  37280
+		num uvs2           :  0
+		num colors         :  0
+		num triangles      :  6452
+	processing begun of light (POINT):  Light
+	processing begun of light (HEMI FROM AREA):  Area
+========= Writing of JSON file started =========
+	writing mesh:  PalmTree
+========= Writing of JSON file completed =========
+========= end of processing =========
+elapsed time:  0 min, 19.2934 secs
