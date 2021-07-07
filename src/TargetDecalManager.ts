@@ -9,6 +9,7 @@ export class TargetDecalManager {
     private decalSize = new Vector3(10,10,10);
     private decals = new Array<Mesh>();
     private iteration = 0;
+    private readonly maxTargets = 1;
     private intervalId;
 
     readonly targetSize = 120;
@@ -18,12 +19,22 @@ export class TargetDecalManager {
         this.decalMaterial = this.createTargetMaterial(scene);
     }
 
+    public getNextWaypoint() : Mesh {
+        return this.decals.length > 0 ? this.decals[0] : null;
+    }
+
     public buildDecal(targetMesh : Mesh, pos: Vector3, norm: Vector3) {
 
         // build instance
         var decal = Mesh.CreateDecal("decal", targetMesh, pos, norm, this.decalSize, 90);
         decal.material = this.decalMaterial;
+        decal.isPickable = false;
+        
         this.decals.push(decal);
+        if(this.decals.length > this.maxTargets){
+            let removedMesh = this.decals.shift();
+            removedMesh.dispose();
+        }
     }
 
     private createTargetMaterial(scene: Scene) : StandardMaterial {
@@ -33,7 +44,7 @@ export class TargetDecalManager {
         material.zOffset = -2;
 
         this.intervalId = window.setInterval(() => { this.drawTarget(); }, this.targetUpdatePeriod);
-
+        
         return material
     }    
     

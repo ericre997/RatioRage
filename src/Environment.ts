@@ -19,7 +19,7 @@ export class Environment
     public colorMap : ColorMap;
     public tree_instances : InstancedMesh[];
 
-    public setup(scene: Scene) {
+    public setup(scene: Scene, onBuildComplete: () => void) {
         this.skybox = this.createSkybox(scene);
 
         this.groundMesh = this.createGround(scene);
@@ -31,7 +31,8 @@ export class Environment
 
         this.colorMap.buildColorMap(scene, 
             (this.groundMesh.material as TerrainMaterial).mixTexture.name, 
-            () => { this.tree_instances = this.placeTrees(scene); });      
+            () => { this.tree_instances = this.placeTrees(scene); 
+            if(onBuildComplete) { onBuildComplete(); }});      
     }
 
     private shuffle(array : any[]) : any[] {
@@ -107,15 +108,19 @@ export class Environment
             .then((result) => {
                 let trunk = <Mesh>result.meshes[1];
                 trunk.isVisible = false;
+                trunk.isPickable = false;
                 trunk.parent = null;
         
                 let foilage = <Mesh>result.meshes[2];
                 foilage.isVisible = false;
+                foilage.isPickable = false;
                 foilage.parent = null;
                     
                 for(let i = 0; i < numTrees; i++) {
                     let newTrunk = trunk.createInstance("trunk_" + i);
+                    newTrunk.isPickable = false;
                     let newFoilage = foilage.createInstance("foilage_" + i);
+                    newFoilage.isPickable = false;
                     newFoilage.parent = newTrunk;
                     newTrunk.position = positions[i];
                     newTrunk.position.y = this.groundMesh.getHeightAtCoordinates(newTrunk.position.x, newTrunk.position.z);

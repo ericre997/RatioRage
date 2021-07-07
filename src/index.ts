@@ -23,6 +23,8 @@ import { Diagnostics } from "./Diagnostics";
 import { Environment } from "./Environment";
 import { ImpactDecalManager } from "./ImpactDecalManager";
 import { TargetDecalManager } from "./TargetDecalManager";
+import { Player } from "./Player";
+
 // physics
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
@@ -32,6 +34,32 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 
 
+function createPlayer(scene: Scene, env: Environment) {
+    let playerSize = 1;
+    let walkSpeed = 20 / 1000;  // units per millisecond
+
+    let posX = 31;
+    let posZ = -1.5;
+    let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
+    let startPosition = new Vector3(posX, posY + playerSize / 2, posZ);
+
+    player = Player.create(scene, playerSize, walkSpeed);
+    player.placePlayerAt(env, startPosition);
+
+    return player;
+ }
+
+/*
+function movePlayerTo(env : Environment, posX : number, posZ : number) {
+    let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
+    
+    player.position = new Vector3(posX, posY + .5, posZ);
+    let surfaceNormal = env.groundMesh.getNormalAtCoordinates(posX, posZ);
+    let rotationAxis = Vector3.Cross(surfaceNormal, player.up).normalize();
+    let angle = Math.acos(Vector3.Dot(surfaceNormal, player.up));
+    player.rotate(rotationAxis, angle); 
+}
+*/
 
 /// begin code!
 
@@ -48,6 +76,7 @@ camera.attachControl(canvas, false);
 let light = new HemisphericLight("light1", new Vector3(0,1,0),scene);
 light.intensity = 1;
 
+
 // TODO REMOVE temp nonsense.
 let sphere = Mesh.CreateSphere("sphere1", 16,  2, scene);
 sphere.material = new NormalMaterial("normal", scene);
@@ -60,10 +89,37 @@ let diagnostics = new Diagnostics(advancedTexture);
 
 // create objects in envionment
 let env = new Environment();
-env.setup(scene);
+let player : Player;
+
+env.setup(scene, () => { 
+    player = createPlayer(scene, env); 
+    startRenderLoop();
+});
+
 
 // decals
 let targetDecalManager = new TargetDecalManager(scene);
+
+
+function movePlayer() {
+    // TODO:  easing
+    // TODO: change to cube.
+
+    let waypoint = targetDecalManager.getNextWaypoint();
+    if(waypoint) {
+        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime());
+    }        
+
+    // if within d2 of next waypoint, remove waypoint
+    // get next waypoint
+    // if no next waypoint, return
+    // compute move point
+    // get height at move point
+    // adjust xy distance based on delta Z
+    // move player to new xyz
+    // adjust player rotation to tangent at new xyz
+
+}
 
 // set up click detection
 
@@ -85,6 +141,7 @@ function pointerDown(pickInfo : PickingInfo) {
     }
 }
 
+
 scene.onPointerObservable.add((pointerInfo) => {
     switch (pointerInfo.type) {
         case PointerEventTypes.POINTERDOWN:
@@ -102,7 +159,6 @@ scene.onPointerObservable.add((pointerInfo) => {
     }
 });
 
-// TODO:  github acct
 
 // TODO:  can we re-write the buildColorMap routine to return a promise? 
 // TODO:  remove MeshBuilder?
@@ -122,58 +178,16 @@ scene.onPointerObservable.add((pointerInfo) => {
 // groundMesh.getHeightAtCoordinates(x,z)
 // groundMesh.getNormalAtCoordinates(x,z);
 
-/*
+function startRenderLoop() {
 
-// drawing 'radio waves'
-var c = document.getElementById("myCanvas");
-var ctx = c.getContext("2d");
-var i = 0;
-var intervalId = window.setInterval(drawit, 50);
-function drawit()
-{
-    const maxRadius = 60;
-    ctx.clearRect(0,0,c.width, c.height);
-    ctx.lineWidth = 10;
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = "#000000";
-    drawCircle(i%maxRadius,40,60);
-    drawCircle((i+20)%maxRadius,40,60);
-    drawCircle((i+40)%maxRadius,40,60);
+    engine.runRenderLoop(()=> {
 
-    i++;
-    if(i > 100) {
-          window.clearInterval(intervalId);
-    }
+        movePlayer();
+        //player.position.y = env.groundMesh.getHeightAtCoordinates(player.position.x, player.position.z);
+
+        scene.render();
+    });
 }
-
-function drawCircle(radius, startFade, endFade) 
-{
-    let alpha = 1;
-    if( radius > startFade) {
-		let increment = 1/(endFade - startFade);
-    	alpha = 1 - increment * (radius - startFade);
-  	}
-
-  	alpha = alpha >= 0 ? alpha : 0;
-   	alpha = alpha <= 1 ? alpha : 1;
-    
-	ctx.globalAlpha = alpha;
-    ctx.strokeStyle = "#FF0000";
-
-    ctx.beginPath();
-    ctx.arc(100, 75, radius, 0, 2 * Math.PI);
-    ctx.stroke();
-}    
-
-
-*/
-
-
-
-engine.runRenderLoop(()=> {
-    scene.render();
-});
-
 
 
 
