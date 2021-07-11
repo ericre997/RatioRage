@@ -17,13 +17,16 @@ import { PickingInfo } from "@babylonjs/core/Collisions/pickingInfo";
 import "@babylonjs/core/Culling/ray";
 // GUI
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
-import { Tools } from "@babylonjs/core/Misc";
+import { setAndStartTimer, Tools } from "@babylonjs/core/Misc";
 
 import { Diagnostics } from "./Diagnostics";
 import { Environment } from "./Environment";
 import { ImpactDecalManager } from "./ImpactDecalManager";
-import { TargetDecalManager } from "./TargetDecalManager";
+import { WaypointManager } from "./WaypointManager";
 import { Player } from "./Player";
+import { Ratio } from "./Ratio";
+import { GameOverlay } from "./GameOverlay";
+import { ElapsedTime } from "./ElapsedTime";
 
 // physics
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
@@ -33,131 +36,6 @@ import { CannonJSPlugin } from "@babylonjs/core/Physics"
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 
-
-
-export class Ratio {
-    public numerator: number;
-    public denominator: number;
-    
-    constructor(numerator: number, denominator: number) {
-        this.numerator = numerator;
-        this.denominator = denominator;
-    }
-}
-
-function getRandomInteger(minValueInclusive : number, maxValueExclusive : number) : number {
-    return minValueInclusive + Math.trunc(Math.random() * (maxValueExclusive - minValueInclusive));
-}
-
-function getRandomValue(values : number[]) : number {
-    let idxChosen = getRandomInteger(0, values.length);
-    return values[idxChosen];
-}
-
-function removeValueFromArray(values: number[], exclude : number) : boolean {
-    const idxExclude = values.indexOf(exclude, 0);
-    if(idxExclude > -1) {
-        values.splice(idxExclude, 1);
-        return true;
-    }
-    return false;
-}
-
-function getSeedRatio() {
-    let primes = [1,2,3,5,7];
-
-    // get random ratio where numerator and denom are both primes
-    let ratio = new Ratio(getRandomValue(primes), getRandomValue(primes));
-
-    removeValueFromArray(primes, 1);
-
-    // multiply one or the other by another prime (might be one)
-    let numberToMux = getRandomInteger(0,3);
-    switch(numberToMux) {
-        case 0:
-            // do nothing
-            break;
-        case 1: 
-            removeValueFromArray(primes, ratio.denominator);
-            ratio.numerator *= getRandomValue(primes);
-            break;
-        case 2: 
-            removeValueFromArray(primes, ratio.numerator);
-            ratio.denominator *= getRandomValue(primes);
-            break;
-        default:
-            throw new Error("unexpected value during seedRatio mux");
-    }
-
-    return ratio;
-}
-
-
-function getEquivalentRatios(ratio : Ratio, numRatios : number, factors : number[]) : Ratio[] {
-    let equivalentRatios = new Array<Ratio>();
-
-    let unusedFactors = [];
-    for(let i = 0; i < factors.length; i++) {
-        unusedFactors.push(factors[i]);
-    }
-
-    numRatios = Math.min(numRatios, factors.length);
-
-    for(let i = 0; i < numRatios; i++) {
-        let idxFactor = getRandomInteger(0, unusedFactors.length);
-        let equivalentRatio = new Ratio(ratio.numerator * unusedFactors[idxFactor], ratio.denominator * unusedFactors[idxFactor]);
-        equivalentRatios.push(equivalentRatio);
-        unusedFactors.splice(idxFactor,1);
-    }
-
-    return equivalentRatios;
-}
-
-function isRatioPresentInArray(ratio : Ratio, array : Ratio[]) : boolean {
-    for(let i = 0; i < array.length; i++){
-        if(array[i].numerator === ratio.numerator &&
-           array[i].denominator === ratio.denominator) {
-               return true;
-           }
-    }
-    return false;
-}
-
-// TODO:  this number picking strategy is pretty crude.  Probably gonna need to fine tune it.
-function getNonEquivalentRatios(ratio : Ratio, numRatios : number) : Ratio[] {
-    let nonEquivalentRatios = new Array<Ratio>();
-    const minInclusive = 1;
-    const maxExclusive = 101;
-
-    // TODO: this will spin forever in degerate cases  
-    // consider adding additional checks to prevent this.
-    while(nonEquivalentRatios.length < numRatios) {
-        let num1 = getRandomInteger(minInclusive, maxExclusive);
-        let num2 = getRandomInteger(minInclusive, maxExclusive);
-
-        // maintain ordering of specified ratio
-        if((ratio.numerator > ratio.denominator && num1 < num2) ||
-        (ratio.numerator < ratio.denominator && num1 > num2)) {
-            [num1, num2] = [num2, num1];
-        }
-    
-        let proposed = new Ratio(num1, num2);
-
-        // if they are equivalent, try again
-        if(ratio.numerator * proposed.denominator === ratio.denominator * proposed.numerator) {
-            continue;
-        }       
-
-        // check that we aren't already using this ratio
-        if(isRatioPresentInArray(proposed, nonEquivalentRatios)) {
-            continue;
-        }
-
-        nonEquivalentRatios.push(proposed);
-    }        
-
-    return nonEquivalentRatios;
-}
 
 
 // TODO:  break all of this nonsense out into it's own support class.
@@ -173,13 +51,13 @@ var equivalentRatios;
 var nonEquivalentRatios;
 
 function generateRatios(){
-    let seedRatio = getSeedRatio();
+    let seedRatio = Ratio.getSeedRatio();
     let factors = [2,3,4,5,6,7,8,9,10];
     
-    equivalentRatios = getEquivalentRatios(seedRatio, 3, factors);
+    equivalentRatios = Ratio.getEquivalentRatios(seedRatio, 3, factors);
     equivalentRatios.push(seedRatio);
 
-    nonEquivalentRatios = getNonEquivalentRatios(seedRatio, 5);
+    nonEquivalentRatios = Ratio.getNonEquivalentRatios(seedRatio, 5);
 }
 
 
@@ -200,9 +78,6 @@ function createPlayer(scene: Scene, env: Environment) {
 
 
 /// begin code!
-
-// temp
-generateRatios();
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas);
@@ -227,19 +102,32 @@ sphere.parent = null;
 // set up HUD
 let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
 let diagnostics = new Diagnostics(advancedTexture);
+let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
 let env = new Environment();
 let player : Player;
 
+let elapsedTime = new ElapsedTime();
+let score = 0;
+
 env.setup(scene, () => { 
     player = createPlayer(scene, env); 
+    
+    generateRatios();
+    diagnostics.updateEquivalentRatios(equivalentRatios);
+    diagnostics.updateNonEquivalentRatios(nonEquivalentRatios);
+    
+    elapsedTime.start();
+
+    gameOverlay.updateTargetRatio(equivalentRatios[equivalentRatios.length-1]);
+
     startRenderLoop();
 });
 
 
 // decals
-let targetDecalManager = new TargetDecalManager(scene);
+let targetDecalManager = new WaypointManager(scene);
 
 
 function movePlayer() {
@@ -269,6 +157,8 @@ function pointerDown(pickInfo : PickingInfo) {
         diagnostics.update(pickInfo.pickedPoint, color);
 
         targetDecalManager.buildDecal(env.groundMesh, pickInfo.pickedPoint, pickInfo.getNormal());
+
+        score += 1;
     }
 }
 
@@ -314,6 +204,9 @@ function startRenderLoop() {
     engine.runRenderLoop(()=> {
 
         movePlayer();
+
+        gameOverlay.updateElapsedTime(elapsedTime);
+        gameOverlay.updateScore(score);
         //player.position.y = env.groundMesh.getHeightAtCoordinates(player.position.x, player.position.z);
 
         scene.render();

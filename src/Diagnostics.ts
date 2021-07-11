@@ -1,6 +1,7 @@
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { Control, TextBlock, Rectangle } from "@babylonjs/gui";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
+import { Ratio } from "./Ratio";
 
 export class Diagnostics {
     private _advancedTexture : AdvancedDynamicTexture;
@@ -8,13 +9,47 @@ export class Diagnostics {
     private _textY : TextBlock;
     private _textZ : TextBlock;
     private _colorIndicator : Rectangle;
+
+    private equivalentRatioText : TextBlock[];
+    private nonEquivalentRatioText : TextBlock[];
     
     constructor(advancedTexture : AdvancedDynamicTexture) {
-        this._advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this._advancedTexture = advancedTexture;
         this._textX = this.createDiagnosticsTextBlock(advancedTexture, 10, 10);
         this._textY = this.createDiagnosticsTextBlock(advancedTexture, 10, 30);
         this._textZ = this.createDiagnosticsTextBlock(advancedTexture, 10, 50);
         this._colorIndicator = this.createDiagnosticsRectangle(advancedTexture, 10, 70);
+
+        this.equivalentRatioText = new Array<TextBlock>();
+        this.nonEquivalentRatioText = new Array<TextBlock>();
+    }
+
+    public updateEquivalentRatios(ratios : Ratio[]) {
+
+        this.equivalentRatioText.length = 0;
+        let left = Math.max(0, this._advancedTexture.getSize().width - 120);
+        let top = 10;
+        let inc = 20;
+
+        for(let i = 0; i < ratios.length; i++) {
+            let thisText = this.createDiagnosticsTextBlock(this._advancedTexture, left, top + i * inc);
+            thisText.text = ratios[i].toString();
+            this.equivalentRatioText.push(thisText);
+        }
+    }
+
+    public updateNonEquivalentRatios(ratios : Ratio[]) {
+
+        this.nonEquivalentRatioText.length = 0;
+        let left = Math.max(0, this._advancedTexture.getSize().width - 60);
+        let top = 10;
+        let inc = 20;
+
+        for(let i = 0; i < ratios.length; i++) {
+            let thisText = this.createDiagnosticsTextBlock(this._advancedTexture, left, top + i * inc);
+            thisText.text = ratios[i].toString();
+            this.equivalentRatioText.push(thisText);
+        }
     }
 
     public update(position : Vector3, color : Color3) {

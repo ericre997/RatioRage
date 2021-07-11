@@ -4,7 +4,7 @@ import { Mesh } from "@babylonjs/core/Meshes";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 
-export class TargetDecalManager {
+export class WaypointManager {
     private decalMaterial;
     private decalSize = new Vector3(10,10,10);
     private decals = new Array<Mesh>();
@@ -26,7 +26,7 @@ export class TargetDecalManager {
     public buildDecal(targetMesh : Mesh, pos: Vector3, norm: Vector3) {
 
         // build instance
-        var decal = Mesh.CreateDecal("decal", targetMesh, pos, norm, this.decalSize, 90);
+        var decal = Mesh.CreateDecal("waypoint", targetMesh, pos, norm, this.decalSize, 90);
         decal.material = this.decalMaterial;
         decal.isPickable = false;
         
@@ -37,18 +37,19 @@ export class TargetDecalManager {
         }
     }
 
+    // note:  all waypoints share the same material
     private createTargetMaterial(scene: Scene) : StandardMaterial {
         let material = new StandardMaterial("targetMaterial", scene);
         material.diffuseColor = new Color3(1,0,0);
         material.opacityTexture = new DynamicTexture("taretOpacityTexture", {width:this.targetSize, height:this.targetSize}, scene, false);
         material.zOffset = -2;
 
-        this.intervalId = window.setInterval(() => { this.drawTarget(); }, this.targetUpdatePeriod);
+        this.intervalId = window.setInterval(() => { this.drawWaypoint(); }, this.targetUpdatePeriod);
         
         return material
     }    
     
-    private drawTarget()
+    private drawWaypoint()
     {
         const maxRadius = this.targetSize/2;
         const startFade = maxRadius * 2.0 / 3.0;
@@ -69,7 +70,7 @@ export class TargetDecalManager {
         ctx.globalAlpha = 1;
         ctx.strokeStyle = "#000000";
         for(let index = 0; index < numLines; index++){
-            TargetDecalManager.drawCircle(ctx, posX, posY,(this.iteration + 2 * index * lineWidth)%maxRadius, startFade, endFade);    
+            WaypointManager.drawCircle(ctx, posX, posY,(this.iteration + 2 * index * lineWidth)%maxRadius, startFade, endFade);    
         }
         
         opacityTexture.update();
