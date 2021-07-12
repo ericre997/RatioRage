@@ -10,7 +10,7 @@ import { ElapsedTime } from "./ElapsedTime";
 
 export class GameOverlay {
     private advancedTexture : AdvancedDynamicTexture;
-    
+
     private elaspedTimeLabel : TextBlock;
     private elapsedTime : TextBlock;
     
@@ -23,28 +23,32 @@ export class GameOverlay {
 
     constructor(advancedTexture : AdvancedDynamicTexture) {
         this.advancedTexture = advancedTexture;
+        
         let width = this.advancedTexture.getSize().width;
         let height = this.advancedTexture.getSize().height;
+        let scale = window.devicePixelRatio;
 
-        this.elaspedTimeLabel = this.createTextBlock(this.advancedTexture, 10, height - 40);
-        this.elaspedTimeLabel.text = this.addHairSpacing("Elapsed Time:");
-        this.elapsedTime = this.createTextBlock(this.advancedTexture, 125, height - 40);
+        {
+            let fontSize = 20 * scale;
+            let outlineWidth = 2 * scale;
 
-        this.scoreLabel = this.createTextBlock(this.advancedTexture, 10, height - 70);
-        this.scoreLabel.text = "Score:".split("").join(String.fromCharCode(8202));;
-        this.score = this.createTextBlock(this.advancedTexture, 70, height - 70);
+            this.elaspedTimeLabel = this.createTextBlock(this.advancedTexture, fontSize, outlineWidth, 10 * scale, height - 40 * scale);
+            this.elaspedTimeLabel.text = this.addHairSpacing("Elapsed Time:");
+            this.elapsedTime = this.createTextBlock(this.advancedTexture, fontSize, outlineWidth, 125 * scale, height - 40 * scale);
 
-        this.targetNumerator = this.createTargetRatioTextBlock(this.advancedTexture, width / 2 - 35, height - 80);
-        this.targetRatioSeparator = this.createTargetRatioSeparator(this.advancedTexture, width / 2 - 35, height - 46);
-        this.targetDenominator = this.createTargetRatioTextBlock(this.advancedTexture, width / 2 - 35, height - 40);
+            this.scoreLabel = this.createTextBlock(this.advancedTexture, fontSize, outlineWidth, 10 * scale, height - 70 * scale);
+            this.scoreLabel.text = "Score:".split("").join(String.fromCharCode(8202));;
+            this.score = this.createTextBlock(this.advancedTexture, fontSize, outlineWidth, 70 * scale, height - 70 * scale);
+        }
+        {
+            let fontSize = 30 * scale;
+            let outlineWidth = 2 * scale;
+            let hCenter =  width / 2 - 35 * scale;
 
-        //this._textX = this.createDiagnosticsTextBlock(advancedTexture, 10, 10);
-        //this._textY = this.createDiagnosticsTextBlock(advancedTexture, 10, 30);
-        //this._textZ = this.createDiagnosticsTextBlock(advancedTexture, 10, 50);
-        //this._colorIndicator = this.createDiagnosticsRectangle(advancedTexture, 10, 70);
-
-        //this.equivalentRatioText = new Array<TextBlock>();
-        //this.nonEquivalentRatioText = new Array<TextBlock>();
+            this.targetNumerator = this.createTargetRatioTextBlock(this.advancedTexture, fontSize, outlineWidth, hCenter, height - 80 * scale);
+            this.targetRatioSeparator = this.createTargetRatioSeparator(this.advancedTexture, 50 * scale, 8 * scale, hCenter, height - 46 * scale);
+            this.targetDenominator = this.createTargetRatioTextBlock(this.advancedTexture, fontSize, outlineWidth, hCenter, height - 40 * scale);
+        }
     }
 
     public updateElapsedTime(elapsedTime: ElapsedTime) {
@@ -55,8 +59,6 @@ export class GameOverlay {
     }
     public updateTargetRatio(ratio: Ratio) {
         this.targetNumerator.text = this.addHairSpacing(ratio.numerator.toString());
-        //this.drawTargetRatioSeparator(this.advancedTexture, 0, 0);
-        //this.targetRatioLine.text = "----";
         this.targetDenominator.text = this.addHairSpacing(ratio.denominator.toString());
     }
 
@@ -66,15 +68,15 @@ export class GameOverlay {
         return source.split("").join(String.fromCharCode(8202));;
     }
 
-    private createTextBlock(ui: AdvancedDynamicTexture, left: number, top: number) : TextBlock {
+    private createTextBlock(ui: AdvancedDynamicTexture, fontSize: number, outlineWidth: number, left: number, top: number) : TextBlock {
         let textBlock = new TextBlock();
 
         textBlock.color = "white";
-        textBlock.fontSize = 20;
+        textBlock.fontSize = fontSize; 
         textBlock.fontFamily = "Bangers";
         
         textBlock.outlineColor = "black";
-        textBlock.outlineWidth = 2;
+        textBlock.outlineWidth = outlineWidth;  
         
         textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
@@ -87,14 +89,14 @@ export class GameOverlay {
     }
 
     // the 1 and 7 in bangers look virtually identical, so we use Luckiest Guy here.
-    private createTargetRatioTextBlock(ui: AdvancedDynamicTexture, left: number, top: number) : TextBlock {
+    private createTargetRatioTextBlock(ui: AdvancedDynamicTexture, fontSize: number, outlineWidth: number, left: number, top: number) : TextBlock {
         let textBlock = new TextBlock();
 
         textBlock.color = "lime";
-        textBlock.fontSize = 30;
+        textBlock.fontSize = fontSize;
         textBlock.fontFamily = "Luckiest Guy";
         textBlock.outlineColor = "black";
-        textBlock.outlineWidth = 2;
+        textBlock.outlineWidth = outlineWidth;
         textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         textBlock.left = left;
@@ -104,16 +106,16 @@ export class GameOverlay {
 
         return textBlock;
     }    
-    private createTargetRatioSeparator(ui: AdvancedDynamicTexture, left: number, top: number) : Parallelogram {
+    private createTargetRatioSeparator(ui: AdvancedDynamicTexture, width: number, height: number, left: number, top: number) : Parallelogram {
         let shape = new Parallelogram();
         
         shape.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         shape.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         shape.left = left;
         shape.top = top;
-        shape.width = "50px"; //"100px";
+        shape.width = width.toString() + "px";
         shape.skew = 5;
-        shape.height = "8px";
+        shape.height = height.toString() + "px";
         shape.color = "black";
         shape.thickness = .8;
         shape.background = "lime";

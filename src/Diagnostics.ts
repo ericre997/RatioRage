@@ -1,4 +1,4 @@
-import { AdvancedDynamicTexture } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, ScatterPanel } from "@babylonjs/gui";
 import { Control, TextBlock, Rectangle } from "@babylonjs/gui";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { Ratio } from "./Ratio";
@@ -15,10 +15,16 @@ export class Diagnostics {
     
     constructor(advancedTexture : AdvancedDynamicTexture) {
         this._advancedTexture = advancedTexture;
-        this._textX = this.createDiagnosticsTextBlock(advancedTexture, 10, 10);
-        this._textY = this.createDiagnosticsTextBlock(advancedTexture, 10, 30);
-        this._textZ = this.createDiagnosticsTextBlock(advancedTexture, 10, 50);
-        this._colorIndicator = this.createDiagnosticsRectangle(advancedTexture, 10, 70);
+        let scale = window.devicePixelRatio;
+
+        {
+            let left = 10 * scale;
+            let fontSize = 16 * scale;
+            this._textX = this.createDiagnosticsTextBlock(advancedTexture, fontSize, left, 10 * scale);
+            this._textY = this.createDiagnosticsTextBlock(advancedTexture, fontSize, left, 30 * scale);
+            this._textZ = this.createDiagnosticsTextBlock(advancedTexture, fontSize, left, 50 * scale);
+            this._colorIndicator = this.createDiagnosticsRectangle(advancedTexture, left, 70 * scale, 70 * scale, 20 * scale);
+        }            
 
         this.equivalentRatioText = new Array<TextBlock>();
         this.nonEquivalentRatioText = new Array<TextBlock>();
@@ -27,12 +33,15 @@ export class Diagnostics {
     public updateEquivalentRatios(ratios : Ratio[]) {
 
         this.equivalentRatioText.length = 0;
-        let left = Math.max(0, this._advancedTexture.getSize().width - 120);
-        let top = 10;
-        let inc = 20;
+        let scale = window.devicePixelRatio;
+
+        let fontSize = 16 * scale;
+        let left = Math.max(0, this._advancedTexture.getSize().width - 120 * scale);
+        let top = 10 * scale;
+        let inc = 20 * scale;
 
         for(let i = 0; i < ratios.length; i++) {
-            let thisText = this.createDiagnosticsTextBlock(this._advancedTexture, left, top + i * inc);
+            let thisText = this.createDiagnosticsTextBlock(this._advancedTexture, fontSize, left, top + i * inc);
             thisText.text = ratios[i].toString();
             this.equivalentRatioText.push(thisText);
         }
@@ -41,12 +50,15 @@ export class Diagnostics {
     public updateNonEquivalentRatios(ratios : Ratio[]) {
 
         this.nonEquivalentRatioText.length = 0;
-        let left = Math.max(0, this._advancedTexture.getSize().width - 60);
-        let top = 10;
-        let inc = 20;
+        let scale = window.devicePixelRatio;
+
+        let fontSize = 16 * scale;
+        let left = Math.max(0, this._advancedTexture.getSize().width - 60 * scale);
+        let top = 10 * scale;
+        let inc = 20 * scale;
 
         for(let i = 0; i < ratios.length; i++) {
-            let thisText = this.createDiagnosticsTextBlock(this._advancedTexture, left, top + i * inc);
+            let thisText = this.createDiagnosticsTextBlock(this._advancedTexture, fontSize, left, top + i * inc);
             thisText.text = ratios[i].toString();
             this.equivalentRatioText.push(thisText);
         }
@@ -61,11 +73,12 @@ export class Diagnostics {
         this._colorIndicator.color = this._colorIndicator.background = colorString;
     }
 
-    private createDiagnosticsTextBlock(ui: AdvancedDynamicTexture, left: number, top: number) : TextBlock {
+    private createDiagnosticsTextBlock(ui: AdvancedDynamicTexture, fontSize: number, left: number, top: number) : TextBlock {
         let textBlock = new TextBlock();
+        let scale = window.devicePixelRatio;
 
         textBlock.color = "white";
-        textBlock.fontSize = 16;
+        textBlock.fontSize = fontSize;
         textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         textBlock.left = left;
@@ -76,15 +89,18 @@ export class Diagnostics {
         return textBlock;    
     }
 
-    private createDiagnosticsRectangle(ui: AdvancedDynamicTexture, left: number, top: number) : Rectangle {
+
+    private createDiagnosticsRectangle(ui: AdvancedDynamicTexture, 
+        left: number, top: number, width: number, height: number) : Rectangle {
         let rect = new Rectangle();
-        
+        let scale = window.devicePixelRatio;
+       
         rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         rect.left = left;
         rect.top = top;
-        rect.width = 0.1;
-        rect.height = "20px";
+        rect.width = width.toString() + "px"; 
+        rect.height = height.toString() + "px"; 
         rect.cornerRadius = 0;
         rect.color = "#F08080";
         rect.thickness = 4;

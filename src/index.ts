@@ -38,15 +38,6 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 
 
 
-// TODO:  break all of this nonsense out into it's own support class.
-// TODO:  shuffle the arrays, use the first equivalent one as the 'target'.
-// 
-// TODO:  the seedRatio might need to be modified so that we don't wind up with things like 2/49.
-// TODO:  the nonEquivalent picking strategy should probably be modified to use adaptive ranges that are similar
-//        to the range represented by the equivalent fractions.
-
-// TODO:  add HUD to display these values for debugging purposes.
-
 var equivalentRatios;
 var nonEquivalentRatios;
 
@@ -81,6 +72,8 @@ function createPlayer(scene: Scene, env: Environment) {
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas);
+engine.setHardwareScalingLevel(1/window.devicePixelRatio);
+
 let scene = new Scene(engine);
 let physicsPlugin = new CannonJSPlugin(true, 10, cannon);
 scene.enablePhysics(new Vector3(0, -9.8, 0), physicsPlugin);
@@ -101,6 +94,9 @@ sphere.parent = null;
 
 // set up HUD
 let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+//advancedTexture.rootContainer.scaleX = window.devicePixelRatio;
+//advancedTexture.rootContainer.scaleY = window.devicePixelRatio;
+
 let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
