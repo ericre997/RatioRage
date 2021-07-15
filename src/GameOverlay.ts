@@ -46,7 +46,7 @@ export class GameOverlay {
             let hCenter =  width / 2 - 35 * scale;
 
             this.targetNumerator = this.createTargetRatioTextBlock(this.advancedTexture, fontSize, outlineWidth, hCenter, height - 80 * scale);
-            this.targetRatioSeparator = this.createTargetRatioSeparator(this.advancedTexture, 50 * scale, 8 * scale, hCenter, height - 46 * scale);
+            this.targetRatioSeparator = this.createTargetRatioSeparator(this.advancedTexture, 50 * scale, 7 * scale, hCenter, height - 43 * scale);
             this.targetDenominator = this.createTargetRatioTextBlock(this.advancedTexture, fontSize, outlineWidth, hCenter, height - 40 * scale);
         }
     }
@@ -94,7 +94,8 @@ export class GameOverlay {
 
         textBlock.color = "lime";
         textBlock.fontSize = fontSize;
-        textBlock.fontFamily = "Luckiest Guy";
+        //textBlock.fontFamily = "Luckiest Guy";
+        textBlock.fontFamily = "Fugaz One";
         textBlock.outlineColor = "black";
         textBlock.outlineWidth = outlineWidth;
         textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
@@ -117,7 +118,7 @@ export class GameOverlay {
         shape.skew = 5;
         shape.height = height.toString() + "px";
         shape.color = "black";
-        shape.thickness = .8;
+        shape.thickness = 2;
         shape.background = "lime";
     
         ui.addControl(shape);   

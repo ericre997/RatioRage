@@ -35,6 +35,9 @@ import * as cannon from "cannon";
 import { CannonJSPlugin } from "@babylonjs/core/Physics"
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { NumberFactory } from "./NumberFactory";
+
+
 
 
 
@@ -94,6 +97,7 @@ sphere.parent = null;
 
 // set up HUD
 let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+// doing this messes up UX layout.  Just manually specify scaling for UX elements.
 //advancedTexture.rootContainer.scaleX = window.devicePixelRatio;
 //advancedTexture.rootContainer.scaleY = window.devicePixelRatio;
 
@@ -101,6 +105,9 @@ let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
+let numberFactory = new NumberFactory(scene);
+
+
 let env = new Environment();
 let player : Player;
 
@@ -118,6 +125,14 @@ env.setup(scene, () => {
 
     gameOverlay.updateTargetRatio(equivalentRatios[equivalentRatios.length-1]);
 
+    numberFactory.loadNumberMeshes(scene).then( () => {
+        for(let i = 0; i < 10; i++) {
+            let inst = numberFactory.numberMeshes[i].createInstance("num_inst_" + i);
+            inst.isPickable = false;
+            inst.position = new Vector3(-20 + i*2, 0, -32);
+            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
+        }
+    });
     startRenderLoop();
 });
 
