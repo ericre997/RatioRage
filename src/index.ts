@@ -105,7 +105,7 @@ let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
-let numberFactory = new NumberFactory(scene);
+let numberFactory; //= NumberFactory(scene);
 
 
 let env = new Environment();
@@ -125,7 +125,9 @@ env.setup(scene, () => {
 
     gameOverlay.updateTargetRatio(equivalentRatios[equivalentRatios.length-1]);
 
-    numberFactory.loadNumberMeshes(scene).then( () => {
+    NumberFactory.create(scene).then( (result) => {
+        numberFactory = result;
+          
         for(let i = 0; i < 10; i++) {
             let inst = numberFactory.numberMeshes[i].createInstance("num_inst_" + i);
             inst.isPickable = false;

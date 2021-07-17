@@ -4,41 +4,62 @@ import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 
 export class NumberFactory {
 
-    public numberMeshes = new Array<Mesh>(10);
+    public numberMeshes;
+    public numberFragmentMeshes;
+    public barMeshes;
+    public barFragmentMeshes;
 
-    constructor(scene : Scene) {
-        //this.loadNumberMeshes(scene);
+    public static create(scene: Scene) : Promise<NumberFactory> {
+        let numberFactory = new NumberFactory();
+        return numberFactory.loadMeshes(scene).then( () => {return numberFactory;} );
     }
 
-    public loadNumberMeshes(scene: Scene) : Promise<any[]>
+    private constructor() {
+        this.numberMeshes = new Array<Mesh>(10);
+
+        this.numberFragmentMeshes = new Array<Array<Mesh>>(10);
+        for(let i = 0; i < 10; i++) {
+            this.numberFragmentMeshes[i] = new Array<Mesh>();
+        }
+
+        this.barMeshes = new Array<Mesh>(4);
+
+        this.barFragmentMeshes = new Array<Array<Mesh>>(4);
+        for(let i = 0; i < 4; i++) {
+            this.barFragmentMeshes[i] = new Array<Mesh>();
+        }
+    }
+
+    private loadMeshes(scene: Scene) : Promise<any[]>
     {
         let promises = [];
     
-        for(let i = 0; i < 10; i++)
-        {
-            let meshName = "Num_" + i.toString();
-            let idx = i;
-            /*
-            let p1 = SceneLoader.ImportMeshAsync(meshName, "Blender\\Numbers\\","Numbers.glb", scene);
-            let p2 = p1.then((result) => {
-                this.numberMeshes[idx] = <Mesh>result.meshes[1];
-                this.numberMeshes[idx].isVisible = false;
-                this.numberMeshes[idx].isPickable = false;
-                this.numberMeshes[idx].parent = null;
+        promises.push(SceneLoader.ImportMeshAsync("", "Blender\\Numbers\\","Numbers.glb", scene)
+            .then((result) => {
+                for(let i = 0; i < result.meshes.length; i++){
+                    let tokens = result.meshes[i].name.split('_');
+                    let thisMesh = <Mesh>result.meshes[i];
+                    thisMesh.isVisible = false;
+                    thisMesh.isPickable = false;
+                    thisMesh.parent = null;
+
+                    let idx = parseInt(tokens[1]);
+                    if(tokens[0] === "Bar") {
+                        idx -= 1;
+                        if(tokens.length === 2) {
+                            this.barMeshes[idx] = thisMesh;
+                        } else {
+                            this.barFragmentMeshes[idx].push(thisMesh);
+                        }   
+                    } else if (tokens[0] === "Num") {
+                        if(tokens.length === 2) {
+                            this.numberMeshes[idx] = thisMesh;
+                        } else {
+                            this.numberFragmentMeshes[idx].push(thisMesh);
+                        }
+                    }                        
                 }
-            );
-            promises.push(p2);
-            */
-            promises.push(SceneLoader.ImportMeshAsync(meshName, "Blender\\Numbers\\","Numbers2.glb", scene)
-                .then((result) => {
-                    this.numberMeshes[idx] = <Mesh>result.meshes[1];
-                    this.numberMeshes[idx].isVisible = false;
-                    this.numberMeshes[idx].isPickable = false;
-                    this.numberMeshes[idx].parent = null;
-                    }
-                ));
-            
-        }                        
+            }));
         return Promise.all(promises);
     }
 }                        
