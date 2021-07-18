@@ -35,9 +35,7 @@ import * as cannon from "cannon";
 import { CannonJSPlugin } from "@babylonjs/core/Physics"
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { NumberFactory } from "./NumberFactory";
-
-
+import { NumberFactory, RatioInstance } from "./NumberFactory";
 
 
 
@@ -105,7 +103,8 @@ let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
-let numberFactory; //= NumberFactory(scene);
+let numberFactory; 
+let ratios = new Array<RatioInstance>();
 
 
 let env = new Environment();
@@ -127,13 +126,35 @@ env.setup(scene, () => {
 
     NumberFactory.create(scene).then( (result) => {
         numberFactory = result;
-          
-        for(let i = 0; i < 10; i++) {
-            let inst = numberFactory.numberMeshes[i].createInstance("num_inst_" + i);
-            inst.isPickable = false;
-            inst.position = new Vector3(-20 + i*2, 0, -32);
-            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
+  
+        for(let i = 0; i < equivalentRatios.length; i++) {
+            let inst = numberFactory.createRatioInstance(scene, equivalentRatios[i]);
+            inst.root.position.x = -20 + ratios.length*3;
+            inst.root.position.y = 0;
+            inst.root.position.z = -32;
+
+            ratios.push(inst);
         }
+
+        for(let i = 0; i < nonEquivalentRatios.length; i++) {
+            let inst = numberFactory.createRatioInstance(scene, nonEquivalentRatios[i]);
+            inst.root.position.x = -20 + ratios.length*3;
+            inst.root.position.y = 0;
+            inst.root.position.z = -32;
+
+            ratios.push(inst);
+        }
+
+/*
+        for(let i = 0; i < 10; i++) {
+            let inst = numberFactory.createRatioInstance(scene, new Ratio(i * 11,i * 11));
+            inst.root.position.x = -20 + i*3;
+            inst.root.position.y = 0;
+            inst.root.position.z = -32;
+
+            ratios.push(inst);
+        }
+*/        
     });
     startRenderLoop();
 });
@@ -220,8 +241,13 @@ function startRenderLoop() {
 
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);
-        //player.position.y = env.groundMesh.getHeightAtCoordinates(player.position.x, player.position.z);
 
+        let zAxis = new Vector3(0,1,0);
+        const radians_per_minute = -30 * 100;
+        let amount = radians_per_minute * engine.getDeltaTime() / (60 * 60 * 1000);
+        for(let i = 0; i < ratios.length; i++) {
+            ratios[i].root.rotate(zAxis, amount);
+        }
         scene.render();
     });
 }
