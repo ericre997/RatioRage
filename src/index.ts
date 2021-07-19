@@ -29,7 +29,7 @@ import { GameOverlay } from "./GameOverlay";
 import { ElapsedTime } from "./ElapsedTime";
 
 // physics
-import { PhysicsImpostor } from "@babylonjs/core/Physics";
+import { PhysicsHelper, PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import * as cannon from "cannon";
 import { CannonJSPlugin } from "@babylonjs/core/Physics"
@@ -77,6 +77,7 @@ engine.setHardwareScalingLevel(1/window.devicePixelRatio);
 
 let scene = new Scene(engine);
 let physicsPlugin = new CannonJSPlugin(true, 10, cannon);
+let physicsHelper = new PhysicsHelper(scene);
 scene.enablePhysics(new Vector3(0, -9.8, 0), physicsPlugin);
 scene.collisionsEnabled = true;
 
@@ -219,19 +220,44 @@ scene.onPointerObservable.add((pointerInfo) => {
 // TODO:  remove MeshBuilder?
 // TODO:  trees look bad.  Tweak materials and lighting for better shading on trunk?
 
-// note:  collision group & collision mask
-// TODO:  move ball on ground
-
 // TODO:  detect collisions with trees
 // TODO:  camera following ball
 
-// TODO:  load number textures
-// TODO:  create and place ratios
-// TODO:  spin ratios
 // TODO:  explode ratios
+
+// TODO:  add water 
+// TODO:  make map irregular border
 
 // groundMesh.getHeightAtCoordinates(x,z)
 // groundMesh.getNormalAtCoordinates(x,z);
+
+function spinRatios() : void {
+    let zAxis = new Vector3(0,1,0);
+    const radians_per_minute = -30 * 100;
+    let amount = radians_per_minute * engine.getDeltaTime() / (60 * 60 * 1000);
+    for(let i = 0; i < ratios.length; i++) {
+        ratios[i].root.rotate(zAxis, amount);
+    }
+}
+
+function checkForCollision(player: Player, instances : RatioInstance[]): RatioInstance {
+    const MIN_D2_FOR_COLLISION = 1;
+
+    for(let i = 0; i < ratios.length; i++) {
+        if(!ratios[i].isExploded && Vector3.DistanceSquared(player.getPosition(), instances[i].getPosition()) <= MIN_D2_FOR_COLLISION ) {
+            return instances[i];
+        }
+    }
+    return null;
+}
+
+function updateRatioFragments() {
+    for(let i = 0; i < ratios.length; i++) {
+        if(ratios[i].isExploded) {
+            ratios[i].cleanupFragments();
+        }
+    }
+}
 
 function startRenderLoop() {
 
@@ -239,15 +265,17 @@ function startRenderLoop() {
 
         movePlayer();
 
+        let collided = checkForCollision(player, ratios);
+        if(collided) {
+            collided.explode(physicsHelper, scene);
+        }
+        
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);
 
-        let zAxis = new Vector3(0,1,0);
-        const radians_per_minute = -30 * 100;
-        let amount = radians_per_minute * engine.getDeltaTime() / (60 * 60 * 1000);
-        for(let i = 0; i < ratios.length; i++) {
-            ratios[i].root.rotate(zAxis, amount);
-        }
+        spinRatios();
+        updateRatioFragments();
+
         scene.render();
     });
 }

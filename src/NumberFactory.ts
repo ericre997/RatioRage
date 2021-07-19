@@ -3,9 +3,13 @@ import { Mesh, InstancedMesh } from "@babylonjs/core/Meshes";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { Vector3 } from "@babylonjs/core/Maths/math";
 import { Ratio } from "./Ratio";
+import { PhysicsImpostor } from "@babylonjs/core/Physics";
+import { PhysicsHelper } from "@babylonjs/core/Physics";
 
 
 export class RatioInstance {
+    public isExploded : boolean;
+    public fragmentTTL : number;    
     public root : Mesh;
     public numerator : Array<InstancedMesh>;
     public numeratorFragments : Array<Array<InstancedMesh>>; 
@@ -13,6 +17,96 @@ export class RatioInstance {
     public denominatorFragments : Array<Array<InstancedMesh>>;
     public bar : InstancedMesh;
     public barFragments : Array<InstancedMesh>;
+
+    public getPosition() : Vector3 {
+        return this.root.position;
+    }
+
+    public cleanupFragments() {
+        let now = Date.now();
+
+        if (now > this.fragmentTTL ) {
+            if(this.numeratorFragments) {
+                this.visitArrays(this.numeratorFragments, (instance) => this.disposeMesh(instance));
+                this.numeratorFragments = null;
+            }
+            if(this.denominatorFragments) {
+                this.visitArrays(this.denominatorFragments, (instance) => this.disposeMesh(instance));
+                this.denominatorFragments = null;
+            }
+            if(this.barFragments) {
+                this.visitArray(this.barFragments, (instance) => this.disposeMesh(instance));
+                this.barFragments = null;
+            }
+        }
+    }
+
+    public disposeMesh(instance : InstancedMesh) {
+        instance.isVisible = false;
+        instance.dispose();
+    }
+
+    public explode(physicsHelper : PhysicsHelper, scene : Scene) : void {
+
+        this.isExploded = true;
+        this.fragmentTTL =  Date.now() + 2000;
+
+
+        // set fragment meshes visible
+        // enable physics proxies
+        this.visitArrays(this.numeratorFragments, (instance) => {
+            //instance.parent = null;
+            //instance.position = 
+            //instance.isVisible = true;
+            //instance.physicsImpostor = new PhysicsImpostor(instance, PhysicsImpostor.MeshImpostor, {mass: 100, friction:0.5, restitution:0}, scene);
+        });
+        /*
+        this.visitArrays(this.denominatorFragments, (instance) => {
+            instance.isVisible = true;
+            instance.physicsImpostor = new PhysicsImpostor(instance, PhysicsImpostor.MeshImpostor, {mass: 100, friction:0.5, restitution:0}, scene);
+        });
+        */
+        this.visitArray(this.barFragments, (instance) => {
+            instance.parent = null;
+            instance.position = this.bar.getAbsolutePosition().clone();
+            let euler = this.root.rotationQuaternion.toEulerAngles();
+            instance.rotationQuaternion = this.root.rotationQuaternion.clone();
+            instance.isVisible = true;
+    
+            instance.physicsImpostor = new PhysicsImpostor(
+                instance, 
+                PhysicsImpostor.ParticleImpostor, 
+                {mass: 10, friction:0.5, restitution:.5, disableBidirectionalTransformation:true}, 
+                scene);
+                
+            instance.physicsImpostor.setLinearVelocity(instance.position.subtract(this.root.getAbsolutePosition())
+                .multiplyByFloats(1 * Math.random(), 6 * Math.random(), 1 * Math.random()));                
+        });
+
+        // get rid of the whole meshes
+        this.visitArray(this.numerator, (instance) => this.disposeMesh(instance));
+        this.numerator = null;
+        this.visitArray(this.denominator, (instance) => this.disposeMesh(instance));
+        this.denominator = null;
+        this.disposeMesh(this.bar);
+        this.bar = null;
+
+    }
+
+    public visitArray(instances: Array<InstancedMesh>, callback: (instance : InstancedMesh) => any) : void {
+        for(let i = 0; i < instances.length; i++) {
+            callback(instances[i]);
+        }
+    }
+
+    public visitArrays(instanceArrays : Array<Array<InstancedMesh>>, callback: (instance : InstancedMesh) => any) : void {
+        for(let i = 0; i < instanceArrays.length; i++) {
+            for(let j = 0; j < instanceArrays[i].length; j++) {
+                callback(instanceArrays[i][j]);
+            }
+        }
+    }        
+
 }
 
 export class NumberFactory {
@@ -82,17 +176,18 @@ export class NumberFactory {
 
         let ratioInstance = new RatioInstance();
 
+        ratioInstance.isExploded = false;
         ratioInstance.root = new Mesh("dummy", scene);
 
         // create instances
         ratioInstance.numerator = this.createNumberInstances(ratio.numerator, ratioInstance.root, true);
-        ratioInstance.numeratorFragments = this.createNumberFragmentInstances(ratio.numerator, ratioInstance.root, false);
+        ratioInstance.numeratorFragments = this.createNumberFragmentInstances(ratio.numerator, ratioInstance.numerator, false);
         ratioInstance.denominator = this.createNumberInstances(ratio.denominator, ratioInstance.root, true);
-        ratioInstance.denominatorFragments = this.createNumberFragmentInstances(ratio.denominator, ratioInstance.root, false);
+        ratioInstance.denominatorFragments = this.createNumberFragmentInstances(ratio.denominator, ratioInstance.denominator, false);
 
         let numDigits = Math.max(ratioInstance.numerator.length, ratioInstance.denominator.length);
         ratioInstance.bar = this.createBarInstance(numDigits, ratioInstance.root, true);
-        ratioInstance.barFragments = this.createBarFragmentInstances(numDigits, ratioInstance.root, false);
+        ratioInstance.barFragments = this.createBarFragmentInstances(numDigits, ratioInstance.bar, false);
         
 
         const widthPerChar = .9;
@@ -133,7 +228,7 @@ export class NumberFactory {
         return meshInstances.reverse();
     }
 
-    private createNumberFragmentInstances(num : number, root: Mesh, isVisible: boolean) : Array<Array<InstancedMesh>> {
+    private createNumberFragmentInstances(num : number, rootInstances: InstancedMesh[], isVisible: boolean) : Array<Array<InstancedMesh>> {
         let meshInstances = Array<Array<InstancedMesh>>();
         do {
             let thisDigit = Math.trunc(num % 10);
@@ -142,7 +237,7 @@ export class NumberFactory {
 
             for(let i = 0; i < thisMeshSet.length; i++){
                 let thisInstance = thisMeshSet[i].createInstance("NFI_" + this.numCreated++);
-                thisInstance.parent = root;
+                thisInstance.parent = rootInstances[i];
                 thisInstance.isVisible = isVisible;
                 thisInstanceSet.push(thisInstance);
             }
@@ -162,7 +257,7 @@ export class NumberFactory {
         return instance;
     }
 
-    private createBarFragmentInstances(numDigits: number, root: Mesh, isVisible : boolean) : Array<InstancedMesh> {
+    private createBarFragmentInstances(numDigits: number, root: InstancedMesh, isVisible : boolean) : Array<InstancedMesh> {
         let meshInstances = Array<InstancedMesh>();
         let idx = Math.min(numDigits, 3);
         let meshSet = this.barFragmentMeshes[idx];

@@ -17,6 +17,10 @@ export class Player {
         this.walkSpeed = walkSpeed;
     }
 
+    public getPosition() : Vector3 {
+        return this.playerMesh.position;
+    }
+
     public static create(scene : Scene, playerSize: number, walkSpeed: number) {
         let player = new Player(playerSize, walkSpeed);
 
