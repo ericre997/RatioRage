@@ -130,18 +130,18 @@ env.setup(scene, () => {
   
         for(let i = 0; i < equivalentRatios.length; i++) {
             let inst = numberFactory.createRatioInstance(scene, equivalentRatios[i]);
-            inst.root.position.x = -20 + ratios.length*3;
-            inst.root.position.y = 0;
-            inst.root.position.z = -32;
+            inst.position.x = -20 + ratios.length*3;
+            inst.position.y = 0;
+            inst.position.z = -32;
 
             ratios.push(inst);
         }
 
         for(let i = 0; i < nonEquivalentRatios.length; i++) {
             let inst = numberFactory.createRatioInstance(scene, nonEquivalentRatios[i]);
-            inst.root.position.x = -20 + ratios.length*3;
-            inst.root.position.y = 0;
-            inst.root.position.z = -32;
+            inst.position.x = -20 + ratios.length*3;
+            inst.position.y = 0;
+            inst.position.z = -32;
 
             ratios.push(inst);
         }
@@ -232,11 +232,12 @@ scene.onPointerObservable.add((pointerInfo) => {
 // groundMesh.getNormalAtCoordinates(x,z);
 
 function spinRatios() : void {
-    let zAxis = new Vector3(0,1,0);
     const radians_per_minute = -30 * 100;
     let amount = radians_per_minute * engine.getDeltaTime() / (60 * 60 * 1000);
     for(let i = 0; i < ratios.length; i++) {
-        ratios[i].root.rotate(zAxis, amount);
+        if(!ratios[i].isExploded) {
+            ratios[i].rotate(amount);
+        }            
     }
 }
 
@@ -244,7 +245,7 @@ function checkForCollision(player: Player, instances : RatioInstance[]): RatioIn
     const MIN_D2_FOR_COLLISION = 1;
 
     for(let i = 0; i < ratios.length; i++) {
-        if(!ratios[i].isExploded && Vector3.DistanceSquared(player.getPosition(), instances[i].getPosition()) <= MIN_D2_FOR_COLLISION ) {
+        if(!ratios[i].isExploded && Vector3.DistanceSquared(player.getPosition(), instances[i].position) <= MIN_D2_FOR_COLLISION ) {
             return instances[i];
         }
     }
@@ -253,8 +254,9 @@ function checkForCollision(player: Player, instances : RatioInstance[]): RatioIn
 
 function updateRatioFragments() {
     for(let i = 0; i < ratios.length; i++) {
-        if(ratios[i].isExploded) {
-            ratios[i].cleanupFragments();
+        if(ratios[i].shouldDispose()) {
+            ratios[i].dispose();
+            ratios.splice(i, 1);
         }
     }
 }
@@ -265,16 +267,17 @@ function startRenderLoop() {
 
         movePlayer();
 
-        let collided = checkForCollision(player, ratios);
-        if(collided) {
-            collided.explode(physicsHelper, scene);
+        if(ratios) {
+            let collided = checkForCollision(player, ratios);
+            if(collided) {
+                collided.explode(scene);
+            }
+
+            spinRatios();
+            updateRatioFragments();
         }
-        
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);
-
-        spinRatios();
-        updateRatioFragments();
 
         scene.render();
     });
