@@ -3,6 +3,7 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
+import "@babylonjs/inspector";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
@@ -76,6 +77,8 @@ const engine = new Engine(canvas);
 engine.setHardwareScalingLevel(1/window.devicePixelRatio);
 
 let scene = new Scene(engine);
+//scene.debugLayer.show();
+
 let physicsPlugin = new CannonJSPlugin(true, 10, cannon);
 let physicsHelper = new PhysicsHelper(scene);
 scene.enablePhysics(new Vector3(0, -9.8, 0), physicsPlugin);

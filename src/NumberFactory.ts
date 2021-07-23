@@ -1,11 +1,15 @@
 import { Scene } from "@babylonjs/core/scene";
 import { Node } from "@babylonjs/core/node";
-import { Mesh, InstancedMesh } from "@babylonjs/core/Meshes";
+import { Mesh, InstancedMesh, TransformNode } from "@babylonjs/core/Meshes";
+import { AbstractMesh } from "@babylonjs/core/Meshes";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { Vector3, Quaternion, Axis } from "@babylonjs/core/Maths/math";
 import { Ratio } from "./Ratio";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
-
+import { ParticleHelper, ParticleSystemSet } from "@babylonjs/core/Particles";
+//import "@babylonjs/core/Particles/ParticleSystemSupport";
+//import "@babylonjs/core/Particles/webgl2ParticleSystem";
+//import "@babylonjs/core/Particles/computeShaderParticleSystem";
 
 export class ExplodableMeshInstance {
     private explosionTTL;
@@ -42,7 +46,7 @@ export class ExplodableMeshInstance {
     }
 
     public shouldDispose() : boolean {
-        return (this.isExploded && Date.now() > this.explodeTime * this.explosionTTL);
+        return (this.isExploded && Date.now() > this.explodeTime + this.explosionTTL);
     }
 
     public explode(scene : Scene) : void {
@@ -104,6 +108,7 @@ export class RatioInstance {
     private denominator : Array<ExplodableMeshInstance>;
     private bar : ExplodableMeshInstance;
 
+    
     constructor(explosionTTL: number, 
                 root: Mesh, 
                 numerator: Array<ExplodableMeshInstance>, 
@@ -136,7 +141,7 @@ export class RatioInstance {
     }
 
     public shouldDispose() : boolean {
-        return (this.isExploded && Date.now() > this.explodeTime * this.explosionTTL);
+        return (this.isExploded && Date.now() > this.explodeTime + this.explosionTTL);
     }
 
     public explode(scene : Scene) : void {
@@ -148,6 +153,16 @@ export class RatioInstance {
         this.visitArray(this.denominator, (instance) => { instance.explode(scene); });
         this.bar.explode(scene);
 
+        ParticleHelper.CreateAsync("explosion", scene).then((set)=> {
+            let pos = this.root.position.clone();
+
+            set.systems.forEach( s=> {
+                s.disposeOnStop = true;
+                s.emitter = pos;
+                //s.maxEmitPower = s.maxEmitPower * .1;
+            });
+            set.start();
+        });
         this.explodeTime = Date.now();        
     }
 
@@ -170,7 +185,7 @@ export class RatioInstance {
 }
 
 export class NumberFactory {
-    public readonly explosionTTL : number = 2000;
+    public readonly explosionTTL : number = 3000;
 
     public numCreated : number = 0;
     public numberMeshes : Array<Mesh>;
