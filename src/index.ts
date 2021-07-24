@@ -57,7 +57,6 @@ function generateRatios(){
     nonEquivalentRatios = Ratio.getNonEquivalentRatios(seedRatio, 5);
 }
 
-
 function createPlayer(scene: Scene, env: Environment) {
     let playerSize = 1;
     let walkSpeed = 20 / 1000;  // units per millisecond

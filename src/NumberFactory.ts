@@ -6,7 +6,7 @@ import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { Vector3, Quaternion, Axis } from "@babylonjs/core/Maths/math";
 import { Ratio } from "./Ratio";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
-import { ParticleHelper, ParticleSystemSet } from "@babylonjs/core/Particles";
+import { ParticleHelper, ParticleSystem, ParticleSystemSet, SubEmitter } from "@babylonjs/core/Particles";
 //import "@babylonjs/core/Particles/ParticleSystemSupport";
 //import "@babylonjs/core/Particles/webgl2ParticleSystem";
 //import "@babylonjs/core/Particles/computeShaderParticleSystem";
@@ -154,13 +154,14 @@ export class RatioInstance {
         this.bar.explode(scene);
 
         // TODO:  preload the explosion particle system.
+        ParticleHelper.BaseAssetsUrl = "particles";
         ParticleHelper.CreateAsync("explosion", scene).then((set)=> {
             let pos = this.root.position.clone();
-
             set.systems.forEach( s=> {
                 s.disposeOnStop = true;
                 s.emitter = pos;
                 s.maxEmitPower = s.maxEmitPower * .1;
+
             });
             set.start();
         });

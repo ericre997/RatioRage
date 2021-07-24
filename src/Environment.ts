@@ -4,7 +4,7 @@ import { CubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { TerrainMaterial, WaterMaterial } from "@babylonjs/materials";
-import { Color3, Vector2 } from "@babylonjs/core/Maths/math";
+import { Color3, Vector2, Axis } from "@babylonjs/core/Maths/math";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import { MeshBuilder } from "@babylonjs/core/Meshes";
@@ -54,7 +54,7 @@ export class Environment
     }
 
     private createSkybox(scene: Scene) : Mesh {
-        let skybox = MeshBuilder.CreateBox("skyBox", {size:2000.0}, scene);
+        let skybox = MeshBuilder.CreateBox("skyBox", {size:3000.0}, scene);
         let skyboxMaterial = new StandardMaterial("skyBoxMat", scene);
         skyboxMaterial.backFaceCulling = false;
         skyboxMaterial.reflectionTexture = new CubeTexture("textures/skybox/TropicalSunnyDay", scene);
@@ -66,12 +66,15 @@ export class Environment
     }    
     
     private createWater(skybox: Mesh, scene: Scene) : Mesh{
-        let waterMesh = Mesh.CreateGround("watermesh", 2048, 2048, 16, scene, false);
+        //let waterMesh = Mesh.CreateGround("watermesh", 2048, 2048, 16, scene, false);
+        let waterMesh = Mesh.CreateDisc("water", 1000, 64, scene);
+        waterMesh.rotate(Axis.X, 1.5708);
+        waterMesh.position.y = .1;
         let water = new WaterMaterial("water", scene, new Vector2(512, 512));
         water.backFaceCulling = true;
         water.bumpTexture = new Texture("textures/water/waterbump.png", scene);
         water.windForce = -10;
-        water.waveHeight = .1; //1.7;
+        water.waveHeight = .05; //1.7;
         water.bumpHeight = .1;
         water.windDirection = new Vector2(1,1);
         water.waterColor = new Color3(0, 0, 221/225);
