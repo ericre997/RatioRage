@@ -30,8 +30,8 @@ export class Player {
 
         return player;
     }
-    
-    public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number) {
+
+    public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {
         let targetPosition = surfaceTargetPosition.clone();
         targetPosition.y += this.playerSize / 2;
 
@@ -47,9 +47,13 @@ export class Player {
 
         let proposedDelta = direction.multiplyByFloats(distanceToMove, distanceToMove, distanceToMove);
         let proposedPosition = this.playerMesh.position.add(proposedDelta);
-  
-        let heightAtProposed = env.groundMesh.getHeightAtCoordinates(proposedPosition.x, proposedPosition.z) + this.playerSize / 2;
-        proposedPosition.y = heightAtProposed;
+        
+   //     proposedPosition = this.getProposedPosition(env, proposedPosition.x, proposedPosition.z, minDestHeight);
+        let heightAtProposed = env.groundMesh.getHeightAtCoordinates(proposedPosition.x, proposedPosition.z);
+        if(heightAtProposed < minDestHeight) {
+            return;
+        }
+        proposedPosition.y = heightAtProposed + this.playerSize /2;;
 
         // TODO:  hrmmm... do we really need this?  It's more accurate, but isn't really noticable.
         // adjust distance moved based on height of terrain at proposed location.
@@ -70,6 +74,34 @@ export class Player {
         let angle = Math.acos(Vector3.Dot(surfaceNormal, this.playerMesh.up));
         this.playerMesh.rotate(rotationAxis, angle); 
     }
+    
+    /*  Hmm... this is pretty jerky.  Also, the player seems to sometimes be able to fall through the map.
+        for now, just leave the 'can't move there' check in place and look into doing a better job with
+        a more generic obstacle avoidance routine. */
+    /*    
+    public getPositionIfDestValid(env : Environment, x : number, z: number, minDestHeight: number) : Vector3 {
+        let pos = new Vector3(x, 0, z);
+        let heightAtProposed = env.groundMesh.getHeightAtCoordinates(x, z);
+        if(heightAtProposed >= minDestHeight) {
+            return new Vector3(x, heightAtProposed + this.playerSize /2, z);
+        }
+        return null;
+    }
+
+    public getProposedPosition(env : Environment, x : number, z: number, minDestHeight: number) : Vector3 {
+        Vector3..RotationFromAxis()
+        let pos = this.getPositionIfDestValid(env, x, z, minDestHeight);
+        if(pos) { return pos; }
+
+        pos = this.getPositionIfDestValid(env, -z, x, minDestHeight);
+        if(pos) { return pos; }
+        
+        pos = this.getPositionIfDestValid(env, x, -z, minDestHeight);
+        if(pos) { return pos; }
+
+        return null;
+    }
+    */
 
     /*
     public movePlayerTo(env : Environment, posX : number, posZ : number)

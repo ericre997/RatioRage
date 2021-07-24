@@ -6,6 +6,8 @@ import { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/inspector";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras";
+import { DepthOfFieldEffectBlurLevel } from "@babylonjs/core/PostProcesses/depthOfFieldEffect";
+
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Mesh } from "@babylonjs/core/Meshes";
 import { NormalMaterial } from "@babylonjs/materials";
@@ -37,6 +39,8 @@ import { CannonJSPlugin } from "@babylonjs/core/Physics"
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { NumberFactory, RatioInstance } from "./NumberFactory";
+import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
+import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 
 
 
@@ -77,6 +81,8 @@ const engine = new Engine(canvas);
 engine.setHardwareScalingLevel(1/window.devicePixelRatio);
 
 let scene = new Scene(engine);
+//scene.fogMode = Scene.FOGMODE_EXP2;
+//scene.fogDensity = .01;
 //scene.debugLayer.show();
 
 let physicsPlugin = new CannonJSPlugin(true, 10, cannon);
@@ -90,6 +96,16 @@ camera.attachControl(canvas, false);
 let light = new HemisphericLight("light1", new Vector3(0,1,0),scene);
 light.intensity = 1;
 
+let cameras = [camera];
+let pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, cameras);
+//pipeline.depthOfFieldEnabled = true;
+//pipeline.depthOfFieldBlurLevel = DepthOfFieldEffectBlurLevel.Low;
+
+pipeline.bloomEnabled = true;
+pipeline.bloomThreshold = 0.8;
+pipeline.bloomWeight = 0.3;
+pipeline.bloomKernel = 64;
+pipeline.bloomScale = 0.5;
 
 // TODO REMOVE temp nonsense.
 let sphere = Mesh.CreateSphere("sphere1", 16,  2, scene);
@@ -134,8 +150,8 @@ env.setup(scene, () => {
         for(let i = 0; i < equivalentRatios.length; i++) {
             let inst = numberFactory.createRatioInstance(scene, equivalentRatios[i]);
             inst.position.x = -20 + ratios.length*3;
-            inst.position.y = 0;
             inst.position.z = -32;
+            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
 
             ratios.push(inst);
         }
@@ -143,22 +159,11 @@ env.setup(scene, () => {
         for(let i = 0; i < nonEquivalentRatios.length; i++) {
             let inst = numberFactory.createRatioInstance(scene, nonEquivalentRatios[i]);
             inst.position.x = -20 + ratios.length*3;
-            inst.position.y = 0;
             inst.position.z = -32;
+            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
 
             ratios.push(inst);
         }
-
-/*
-        for(let i = 0; i < 10; i++) {
-            let inst = numberFactory.createRatioInstance(scene, new Ratio(i * 11,i * 11));
-            inst.root.position.x = -20 + i*3;
-            inst.root.position.y = 0;
-            inst.root.position.z = -32;
-
-            ratios.push(inst);
-        }
-*/        
     });
     startRenderLoop();
 });
@@ -167,6 +172,7 @@ env.setup(scene, () => {
 // decals
 let targetDecalManager = new WaypointManager(scene);
 
+const MIN_PLAYER_HEIGHT : number = .1;
 
 function movePlayer() {
     // TODO:  easing
@@ -174,7 +180,7 @@ function movePlayer() {
     // TODO:  adjust speed based on terrain?
     let waypoint = targetDecalManager.getNextWaypoint();
     if(waypoint) {
-        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime());
+        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), MIN_PLAYER_HEIGHT);
     }        
 }
 

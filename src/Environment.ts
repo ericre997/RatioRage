@@ -3,24 +3,32 @@ import { Mesh, GroundMesh, InstancedMesh } from "@babylonjs/core/Meshes";
 import { CubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { TerrainMaterial, NormalMaterial } from "@babylonjs/materials";
-import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
+import { TerrainMaterial, WaterMaterial } from "@babylonjs/materials";
+import { Color3, Vector2 } from "@babylonjs/core/Maths/math";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import { MeshBuilder } from "@babylonjs/core/Meshes";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { ColorMap } from "./ColorMap";
 
+// TODO:  
+// mist in background
+
 
 export class Environment
 {
+    public readonly minHeightForTreePlacment : number = 1;
     public skybox : Mesh;
     public groundMesh : GroundMesh;
+    public waterMesh : Mesh;
     public colorMap : ColorMap;
     public tree_instances : InstancedMesh[];
 
+    
     public setup(scene: Scene, onBuildComplete: () => void) {
         this.skybox = this.createSkybox(scene);
+
+        this.waterMesh = this.createWater(this.skybox, scene);
 
         this.groundMesh = this.createGround(scene);
 
@@ -45,9 +53,8 @@ export class Environment
         return array;
     }
 
-
     private createSkybox(scene: Scene) : Mesh {
-        let skybox = MeshBuilder.CreateBox("skyBox", {size:1000.0}, scene);
+        let skybox = MeshBuilder.CreateBox("skyBox", {size:2000.0}, scene);
         let skyboxMaterial = new StandardMaterial("skyBoxMat", scene);
         skyboxMaterial.backFaceCulling = false;
         skyboxMaterial.reflectionTexture = new CubeTexture("textures/skybox/TropicalSunnyDay", scene);
@@ -58,11 +65,28 @@ export class Environment
         return skybox;
     }    
     
+    private createWater(skybox: Mesh, scene: Scene) : Mesh{
+        let waterMesh = Mesh.CreateGround("watermesh", 2048, 2048, 16, scene, false);
+        let water = new WaterMaterial("water", scene, new Vector2(512, 512));
+        water.backFaceCulling = true;
+        water.bumpTexture = new Texture("textures/water/waterbump.png", scene);
+        water.windForce = -10;
+        water.waveHeight = .1; //1.7;
+        water.bumpHeight = .1;
+        water.windDirection = new Vector2(1,1);
+        water.waterColor = new Color3(0, 0, 221/225);
+        water.colorBlendFactor = 0.0;
+        water.addToRenderList(skybox);
+        
+        waterMesh.material = water;
+        return waterMesh;
+    }
+
     private createGround(scene : Scene) : GroundMesh {
     
         var ground = MeshBuilder.CreateGroundFromHeightMap(
             "terrain", 
-            "textures/ground/heightMap.png", 
+            "textures/ground/heightMap2.png", 
             {width:100,height:100,subdivisions:100,minHeight:0,maxHeight:10,
             onReady: (mesh) => {
                 ground.physicsImpostor = new PhysicsImpostor(ground, PhysicsImpostor.HeightmapImpostor, {mass:0});
@@ -100,6 +124,11 @@ export class Environment
         let instances = new Array<InstancedMesh>();
 
         let positions = this.colorMap.getPositions((color: Color3) => { return color.b == 1 && !color.r && !color.g; })    
+        for(let i = positions.length - 1; i >= 0; i--) {
+            if(this.groundMesh.getHeightAtCoordinates(positions[i].x, positions[i].z) < this.minHeightForTreePlacment ) {
+                positions.splice(i, 1);
+            }
+        }
         positions = this.shuffle(positions).slice(0,numTrees);
     
         let promises = [];

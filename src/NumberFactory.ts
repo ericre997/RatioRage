@@ -153,13 +153,14 @@ export class RatioInstance {
         this.visitArray(this.denominator, (instance) => { instance.explode(scene); });
         this.bar.explode(scene);
 
+        // TODO:  preload the explosion particle system.
         ParticleHelper.CreateAsync("explosion", scene).then((set)=> {
             let pos = this.root.position.clone();
 
             set.systems.forEach( s=> {
                 s.disposeOnStop = true;
                 s.emitter = pos;
-                //s.maxEmitPower = s.maxEmitPower * .1;
+                s.maxEmitPower = s.maxEmitPower * .1;
             });
             set.start();
         });
