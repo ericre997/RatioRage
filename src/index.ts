@@ -6,7 +6,6 @@ import { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/inspector";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras";
-import { DepthOfFieldEffectBlurLevel } from "@babylonjs/core/PostProcesses/depthOfFieldEffect";
 
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Mesh } from "@babylonjs/core/Meshes";
@@ -36,11 +35,10 @@ import { PhysicsHelper, PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import * as cannon from "cannon";
 import { CannonJSPlugin } from "@babylonjs/core/Physics"
-import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { NumberFactory, RatioInstance } from "./NumberFactory";
+import { NumberFactory } from "./NumberFactory";
+import { RatioInstance } from "./RatioInstance";
+
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
-import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 
 
 
@@ -132,6 +130,32 @@ let player : Player;
 let elapsedTime = new ElapsedTime();
 let score = 0;
 
+function createRatioInstancesAsync() : Promise<any> {
+    let promises : Promise<any>[] = new Array<Promise<any>>();
+
+    for(let i = 0; i < equivalentRatios.length; i++) {
+        numberFactory.createRatioInstanceAsync(scene, equivalentRatios[i]).then( (inst) => {
+            inst.position.x = -20 + ratios.length*3;
+            inst.position.z = -32;
+            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
+
+            ratios.push(inst);
+        });            
+    }
+
+    for(let i = 0; i < nonEquivalentRatios.length; i++) {
+        numberFactory.createRatioInstanceAsync(scene, nonEquivalentRatios[i]).then( (inst) => {
+            inst.position.x = -20 + ratios.length*3;
+            inst.position.z = -32;
+            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
+
+            ratios.push(inst);
+        });            
+    }
+
+    return Promise.all(promises);
+}
+
 env.setup(scene, () => { 
     player = createPlayer(scene, env); 
     
@@ -142,31 +166,16 @@ env.setup(scene, () => {
     elapsedTime.start();
 
     gameOverlay.updateTargetRatio(equivalentRatios[equivalentRatios.length-1]);
-
+    
     NumberFactory.create(scene).then( (result) => {
         numberFactory = result;
-  
-        for(let i = 0; i < equivalentRatios.length; i++) {
-            let inst = numberFactory.createRatioInstance(scene, equivalentRatios[i]);
-            inst.position.x = -20 + ratios.length*3;
-            inst.position.z = -32;
-            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
-
-            ratios.push(inst);
-        }
-
-        for(let i = 0; i < nonEquivalentRatios.length; i++) {
-            let inst = numberFactory.createRatioInstance(scene, nonEquivalentRatios[i]);
-            inst.position.x = -20 + ratios.length*3;
-            inst.position.z = -32;
-            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
-
-            ratios.push(inst);
-        }
+    
+    }).then( () => { 
+        createRatioInstancesAsync(); 
+    }).then( () => { 
+        startRenderLoop();
     });
-    startRenderLoop();
 });
-
 
 // decals
 let targetDecalManager = new WaypointManager(scene);
@@ -290,6 +299,3 @@ function startRenderLoop() {
         scene.render();
     });
 }
-
-
-
