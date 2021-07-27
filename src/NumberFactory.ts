@@ -77,10 +77,10 @@ export class NumberFactory {
         let root = new Mesh("R_" + this.numCreated++, scene);
 
         // create instances
-        let numerator = this.createExplodableNumberInstances(ratio.numerator, root);
-        let denominator = this.createExplodableNumberInstances(ratio.numerator, root);
+        let numerator = this.createExplodableNumberInstances(ratio.numerator, root, scene);
+        let denominator = this.createExplodableNumberInstances(ratio.numerator, root, scene);
         let numDigits = Math.max(numerator.length, denominator.length);
-        let bar = this.createExplodableBarInstance(numDigits, root);
+        let bar = this.createExplodableBarInstance(numDigits, root, scene);
 
         // TODO:  move positioning stuff into RatioInstance constructor.
         const widthPerChar = .9;
@@ -109,14 +109,19 @@ export class NumberFactory {
 
     }
 
-    private createExplodableNumberInstances(num : number, root : Mesh) : Array<ExplodableMeshInstance> {
+    private createExplodableNumberInstances(num : number, ratioRoot : Mesh, scene : Scene) : Array<ExplodableMeshInstance> {
         let instances = Array<ExplodableMeshInstance>();
 
         do {
             let thisDigit = Math.trunc(num % 10);
 
+            // create root for the digit instance
+            let numberRoot = new Mesh("number_root_" + this.numCreated++, scene);
+            numberRoot.parent = ratioRoot;
+
             // create the whole number instance
-            let solid = this.numberMeshes[thisDigit].createInstance("NI_" + this.numCreated++);
+            let solids = new Array<InstancedMesh>();
+            solids.push(this.numberMeshes[thisDigit].createInstance("NI_" + this.numCreated++));
 
             // create set of fragments
             let fragmentMeshes = this.numberFragmentMeshes[thisDigit];
@@ -128,7 +133,7 @@ export class NumberFactory {
             }
 
             // create explodable instance            
-            let thisInstance = new ExplodableMeshInstance(this.explosionTTL, root, solid, fragments);
+            let thisInstance = new ExplodableMeshInstance(this.explosionTTL, numberRoot, solids, fragments);
 
             // push
             instances.push(thisInstance);
@@ -141,13 +146,17 @@ export class NumberFactory {
         return instances.reverse();
     }
 
-    private createExplodableBarInstance(numDigits: number, root : Mesh) : ExplodableMeshInstance {
+    private createExplodableBarInstance(numDigits: number, ratioRoot : Mesh, scene : Scene) : ExplodableMeshInstance {
 
         // note:  we have four sizes of bars at indices 0-3
         let idx = Math.min(numDigits, 3);
 
+        let barRoot = new Mesh("bar_root_" + this.numCreated++, scene);
+        barRoot.parent = ratioRoot;
+
         // solid
-        let solid = this.barMeshes[idx].createInstance("BI_" + this.numCreated);
+        let solids = new Array<InstancedMesh>();
+        solids.push(this.barMeshes[idx].createInstance("BI_" + this.numCreated));
 
         // fragments
         let fragmentMeshes = this.barFragmentMeshes[idx];
@@ -159,7 +168,7 @@ export class NumberFactory {
         }
 
         // explodable instance
-        let thisInstance = new ExplodableMeshInstance(this.explosionTTL, root, solid, fragments);
+        let thisInstance = new ExplodableMeshInstance(this.explosionTTL, barRoot, solids, fragments);
 
         return thisInstance;
     }

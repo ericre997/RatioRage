@@ -1,37 +1,41 @@
 import { Scene } from "@babylonjs/core/scene";
 import { Node } from "@babylonjs/core/node";
-import { InstancedMesh } from "@babylonjs/core/Meshes";
+import { Mesh, InstancedMesh, InstancedLinesMesh } from "@babylonjs/core/Meshes";
 import { Vector3, Quaternion } from "@babylonjs/core/Maths/math";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
 
 export class ExplodableMeshInstance {
     private explosionTTL;
     private explodeTime : number
-    private solidMesh : InstancedMesh;
+    private root : Mesh;
+    private solids : Array<InstancedMesh>;
     private fragments : Array<InstancedMesh>;
 
-    public constructor(explosionTTL : number, parent : Node, solidMesh : InstancedMesh, fragments: Array<InstancedMesh>) {
+    public constructor(explosionTTL : number, root : Mesh, solids : Array<InstancedMesh>, fragments: Array<InstancedMesh>) {
         this.explosionTTL = explosionTTL;
         this.explodeTime = null;
-        this.solidMesh = solidMesh;
+        this.root = root;
+        this.solids = solids;
         this.fragments = fragments;
 
-        this.solidMesh.isVisible = true;
-        this.solidMesh.parent = parent;
-        for(let i = 0; i < this.fragments.length; i++) {
-            this.fragments[i].isVisible = false;
-            this.fragments[i].parent = this.solidMesh;
-        }
+        this.solids.forEach(element => {
+            element.isVisible = true;
+            element.parent = root;
+        });
+        this.fragments.forEach(element => {
+            element.isVisible = false;
+            element.parent = root;
+        });
     }
 
     public get position() : Vector3 {
-        return this.solidMesh.position;
+        return this.root.position;
     }
 
     public set position(pos : Vector3) {
-        this.solidMesh.position.x = pos.x;
-        this.solidMesh.position.y = pos.y;
-        this.solidMesh.position.z = pos.z;
+        this.root.position.x = pos.x;
+        this.root.position.y = pos.y;
+        this.root.position.z = pos.z;
     }
 
     public get isExploded() : boolean { 
@@ -46,18 +50,19 @@ export class ExplodableMeshInstance {
         if(this.isExploded) {
             throw "Object is already exploded";
         }
-        
+
+        let scale = new Vector3();
+        let rotation = new Quaternion();
+        let position = new Vector3();
+        this.root.getWorldMatrix().decompose(scale, rotation, position);
+
         for(let i = 0; i < this.fragments.length; i++) {
             let instance = this.fragments[i];
             instance.parent = null;
  
-            let scale = new Vector3();
-            let rotation = new Quaternion();
-            let position = new Vector3();
-            this.solidMesh.getWorldMatrix().decompose(scale, rotation, position);
- 
-            instance.position = position;
-            instance.rotationQuaternion = rotation;
+            instance.scaling = scale.clone();
+            instance.position = position.clone();
+            instance.rotationQuaternion = rotation.clone();
             instance.isVisible = true;
 
             instance.physicsImpostor = new PhysicsImpostor(
@@ -74,19 +79,24 @@ export class ExplodableMeshInstance {
             instance.physicsImpostor.setAngularVelocity(angularVelocity);
         }
 
+        this.solids.forEach(element => {
+            element.isVisible = false;
+        });
+
         this.explodeTime = Date.now();
-        this.solidMesh.isVisible = false;
     }        
 
     public dispose() {
-        this.solidMesh.isVisible = false;
-        this.solidMesh.dispose();
-        this.solidMesh = null;
-        for(let i = 0; i < this.fragments.length; i++) {
-            let fragment = this.fragments[i];
-            fragment.isVisible = false;
-            fragment.dispose();
-        }
+        this.solids.forEach(element =>  {
+            element.isVisible = false;
+            element.dispose();
+        });
+        this.solids = null;
+
+        this.fragments.forEach(element => {
+            element.isVisible = false;
+            element.dispose();
+        });
         this.fragments = null;
     }
 }

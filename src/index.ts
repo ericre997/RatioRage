@@ -39,6 +39,8 @@ import { NumberFactory } from "./NumberFactory";
 import { RatioInstance } from "./RatioInstance";
 
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
+import { BarrelFactory } from "./BarrelFactory";
+import { BarrelInstance } from "./BarrelInstance";
 
 
 
@@ -122,7 +124,8 @@ let gameOverlay = new GameOverlay(advancedTexture);
 // create objects in envionment
 let numberFactory; 
 let ratios = new Array<RatioInstance>();
-
+let barrelFactory;
+let barrels = new Array<BarrelInstance>();
 
 let env = new Environment();
 let player : Player;
@@ -131,27 +134,43 @@ let elapsedTime = new ElapsedTime();
 let score = 0;
 
 function createRatioInstancesAsync() : Promise<any> {
-    let promises : Promise<any>[] = new Array<Promise<any>>();
+    let promises = new Array<Promise<any>>();
 
     for(let i = 0; i < equivalentRatios.length; i++) {
-        numberFactory.createRatioInstanceAsync(scene, equivalentRatios[i]).then( (inst) => {
+        let thisPromise = numberFactory.createRatioInstanceAsync(scene, equivalentRatios[i]).then( (inst) => {
             inst.position.x = -20 + ratios.length*3;
             inst.position.z = -32;
             inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
 
             ratios.push(inst);
-        });            
+        });      
+        promises.push(thisPromise);      
     }
 
     for(let i = 0; i < nonEquivalentRatios.length; i++) {
-        numberFactory.createRatioInstanceAsync(scene, nonEquivalentRatios[i]).then( (inst) => {
+        let thisPromise = numberFactory.createRatioInstanceAsync(scene, nonEquivalentRatios[i]).then( (inst) => {
             inst.position.x = -20 + ratios.length*3;
             inst.position.z = -32;
             inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
 
             ratios.push(inst);
         });            
+        promises.push(thisPromise);
     }
+
+    return Promise.all(promises);
+}
+
+function createBarrelInstancesAsync() : Promise<any> {
+    let promises = new Array<Promise<any>>();
+
+    let thisPromise = barrelFactory.createBarrelInstanceAsync(scene).then( (inst) => {
+        inst.position.x = 0;
+        inst.position.z = -36;
+        inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
+        barrels.push(inst);
+    })
+    promises.push(thisPromise);
 
     return Promise.all(promises);
 }
@@ -166,13 +185,17 @@ env.setup(scene, () => {
     elapsedTime.start();
 
     gameOverlay.updateTargetRatio(equivalentRatios[equivalentRatios.length-1]);
-    
-    NumberFactory.create(scene).then( (result) => {
+
+    BarrelFactory.create(scene).then((result) => {
+        barrelFactory = result;
+    }).then( () => {
+        createBarrelInstancesAsync();
+    }).then( () => {
+        return NumberFactory.create(scene);
+    }).then( (result) => {
         numberFactory = result;
-    
-    }).then( () => { 
-        createRatioInstancesAsync(); 
-    }).then( () => { 
+        return createRatioInstancesAsync();
+    }).then( () => {
         startRenderLoop();
     });
 });
@@ -186,6 +209,7 @@ function movePlayer() {
     // TODO:  easing
     // TODO:  allow for multiple waypoints (i.e. remove current waypoint if hit?)
     // TODO:  adjust speed based on terrain?
+    // TODO:  go around obstacles.
     let waypoint = targetDecalManager.getNextWaypoint();
     if(waypoint) {
         player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), MIN_PLAYER_HEIGHT);
@@ -197,6 +221,11 @@ function movePlayer() {
 function pointerUp() {}
 function pointerMove() {}
 function pointerDown(pickInfo : PickingInfo) {
+
+    if(barrels[0]) {
+        barrels[0].explode(scene);
+        barrels[0] = null;
+    }        
 
     if(pickInfo.pickedMesh === env.groundMesh) {
 
@@ -239,11 +268,6 @@ scene.onPointerObservable.add((pointerInfo) => {
 
 // TODO:  detect collisions with trees
 // TODO:  camera following ball
-
-// TODO:  explode ratios
-
-// TODO:  add water 
-// TODO:  make map irregular border
 
 // groundMesh.getHeightAtCoordinates(x,z)
 // groundMesh.getNormalAtCoordinates(x,z);

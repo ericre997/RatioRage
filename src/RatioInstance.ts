@@ -69,21 +69,6 @@ export class RatioInstance {
 
         });
         this.particleSystemSet.start();
-    
-        // TODO:  preload the explosion particle system.
-        /*
-        ParticleHelper.BaseAssetsUrl = "particles";
-        ParticleHelper.CreateAsync("explosion", scene).then((set)=> {
-            let pos = this.root.position.clone();
-            set.systems.forEach( s=> {
-                s.disposeOnStop = true;
-                s.emitter = pos;
-                s.maxEmitPower = s.maxEmitPower * .1;
-
-            });
-            set.start();
-        });
-        */
         this.explodeTime = Date.now();        
     }
 
