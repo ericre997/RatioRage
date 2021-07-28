@@ -10,7 +10,7 @@ import "@babylonjs/core/Physics/physicsEngineComponent";
 import { MeshBuilder } from "@babylonjs/core/Meshes";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { ColorMap } from "./ColorMap";
-
+import { Utils } from "./Utils";
 // TODO:  
 // mist in background
 
@@ -22,7 +22,7 @@ export class Environment
     public groundMesh : GroundMesh;
     public waterMesh : Mesh;
     public colorMap : ColorMap;
-    public tree_instances : InstancedMesh[];
+    public treeInstances : InstancedMesh[];
 
     
     public setup(scene: Scene, onBuildComplete: () => void) {
@@ -39,19 +39,10 @@ export class Environment
 
         this.colorMap.buildColorMap(scene, 
             (this.groundMesh.material as TerrainMaterial).mixTexture.name, 
-            () => { this.tree_instances = this.placeTrees(scene); 
+            () => { this.treeInstances = this.placeTrees(scene); 
             if(onBuildComplete) { onBuildComplete(); }});      
     }
 
-    private shuffle(array : any[]) : any[] {
-        let currentIndex = array.length;
-        while(0 != currentIndex) {
-            let randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
-            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
-        }
-        return array;
-    }
 
     private createSkybox(scene: Scene) : Mesh {
         let skybox = MeshBuilder.CreateBox("skyBox", {size:3000.0}, scene);
@@ -132,7 +123,7 @@ export class Environment
                 positions.splice(i, 1);
             }
         }
-        positions = this.shuffle(positions).slice(0,numTrees);
+        positions = Utils.shuffle(positions).slice(0,numTrees);
     
         let promises = [];
     

@@ -7,7 +7,7 @@ import { ExplodableMeshInstance } from "./ExplodableMeshInstance";
 import { RatioInstance } from "./RatioInstance";
 
 
-export class NumberFactory {
+export class RatioFactory {
     public readonly explosionTTL : number = 3000;
 
     public numCreated : number = 0;
@@ -16,8 +16,8 @@ export class NumberFactory {
     public barMeshes : Array<Mesh>;
     public barFragmentMeshes : Array<Array<Mesh>>;
 
-    public static create(scene: Scene) : Promise<NumberFactory> {
-        let numberFactory = new NumberFactory();
+    public static create(scene: Scene) : Promise<RatioFactory> {
+        let numberFactory = new RatioFactory();
         return numberFactory.loadMeshes(scene).then( () => {return numberFactory;} );
     }
 
@@ -72,13 +72,13 @@ export class NumberFactory {
     }
 
 
-    public createRatioInstanceAsync(scene : Scene, ratio : Ratio) : Promise<void | RatioInstance> {
+    public createRatioInstanceAsync(scene : Scene, ratio : Ratio) : Promise<RatioInstance> {
 
         let root = new Mesh("R_" + this.numCreated++, scene);
 
         // create instances
         let numerator = this.createExplodableNumberInstances(ratio.numerator, root, scene);
-        let denominator = this.createExplodableNumberInstances(ratio.numerator, root, scene);
+        let denominator = this.createExplodableNumberInstances(ratio.denominator, root, scene);
         let numDigits = Math.max(numerator.length, denominator.length);
         let bar = this.createExplodableBarInstance(numDigits, root, scene);
 

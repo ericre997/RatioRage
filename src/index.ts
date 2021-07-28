@@ -35,12 +35,14 @@ import { PhysicsHelper, PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import * as cannon from "cannon";
 import { CannonJSPlugin } from "@babylonjs/core/Physics"
-import { NumberFactory } from "./NumberFactory";
+import { RatioManager } from "./RatioManager";
+import { RatioFactory } from "./RatioFactory";
 import { RatioInstance } from "./RatioInstance";
 
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { BarrelFactory } from "./BarrelFactory";
 import { BarrelInstance } from "./BarrelInstance";
+import { Utils } from "./Utils";
 
 
 
@@ -122,8 +124,12 @@ let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
+/*
 let numberFactory; 
 let ratios = new Array<RatioInstance>();
+*/
+let ratioManager  = new RatioManager();
+
 let barrelFactory;
 let barrels = new Array<BarrelInstance>();
 
@@ -132,34 +138,6 @@ let player : Player;
 
 let elapsedTime = new ElapsedTime();
 let score = 0;
-
-function createRatioInstancesAsync() : Promise<any> {
-    let promises = new Array<Promise<any>>();
-
-    for(let i = 0; i < equivalentRatios.length; i++) {
-        let thisPromise = numberFactory.createRatioInstanceAsync(scene, equivalentRatios[i]).then( (inst) => {
-            inst.position.x = -20 + ratios.length*3;
-            inst.position.z = -32;
-            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
-
-            ratios.push(inst);
-        });      
-        promises.push(thisPromise);      
-    }
-
-    for(let i = 0; i < nonEquivalentRatios.length; i++) {
-        let thisPromise = numberFactory.createRatioInstanceAsync(scene, nonEquivalentRatios[i]).then( (inst) => {
-            inst.position.x = -20 + ratios.length*3;
-            inst.position.z = -32;
-            inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
-
-            ratios.push(inst);
-        });            
-        promises.push(thisPromise);
-    }
-
-    return Promise.all(promises);
-}
 
 function createBarrelInstancesAsync() : Promise<any> {
     let promises = new Array<Promise<any>>();
@@ -189,12 +167,9 @@ env.setup(scene, () => {
     BarrelFactory.create(scene).then((result) => {
         barrelFactory = result;
     }).then( () => {
-        createBarrelInstancesAsync();
+        return createBarrelInstancesAsync();
     }).then( () => {
-        return NumberFactory.create(scene);
-    }).then( (result) => {
-        numberFactory = result;
-        return createRatioInstancesAsync();
+        return ratioManager.initialize(env, scene);
     }).then( () => {
         startRenderLoop();
     });
@@ -243,7 +218,6 @@ function pointerDown(pickInfo : PickingInfo) {
     }
 }
 
-
 scene.onPointerObservable.add((pointerInfo) => {
     switch (pointerInfo.type) {
         case PointerEventTypes.POINTERDOWN:
@@ -261,7 +235,6 @@ scene.onPointerObservable.add((pointerInfo) => {
     }
 });
 
-
 // TODO:  can we re-write the buildColorMap routine to return a promise? 
 // TODO:  remove MeshBuilder?
 // TODO:  trees look bad.  Tweak materials and lighting for better shading on trunk?
@@ -269,38 +242,6 @@ scene.onPointerObservable.add((pointerInfo) => {
 // TODO:  detect collisions with trees
 // TODO:  camera following ball
 
-// groundMesh.getHeightAtCoordinates(x,z)
-// groundMesh.getNormalAtCoordinates(x,z);
-
-function spinRatios() : void {
-    const radians_per_minute = -30 * 100;
-    let amount = radians_per_minute * engine.getDeltaTime() / (60 * 60 * 1000);
-    for(let i = 0; i < ratios.length; i++) {
-        if(!ratios[i].isExploded) {
-            ratios[i].rotate(amount);
-        }            
-    }
-}
-
-function checkForCollision(player: Player, instances : RatioInstance[]): RatioInstance {
-    const MIN_D2_FOR_COLLISION = 1;
-
-    for(let i = 0; i < ratios.length; i++) {
-        if(!ratios[i].isExploded && Vector3.DistanceSquared(player.getPosition(), instances[i].position) <= MIN_D2_FOR_COLLISION ) {
-            return instances[i];
-        }
-    }
-    return null;
-}
-
-function updateRatioFragments() {
-    for(let i = 0; i < ratios.length; i++) {
-        if(ratios[i].shouldDispose()) {
-            ratios[i].dispose();
-            ratios.splice(i, 1);
-        }
-    }
-}
 
 function startRenderLoop() {
 
@@ -308,15 +249,15 @@ function startRenderLoop() {
 
         movePlayer();
 
-        if(ratios) {
-            let collided = checkForCollision(player, ratios);
-            if(collided) {
-                collided.explode(scene);
-            }
 
-            spinRatios();
-            updateRatioFragments();
+        let collided = ratioManager.checkForCollision(player.getPosition());
+        if(collided) {
+            collided.explode(scene);
         }
+
+        ratioManager.spinRatios(engine.getDeltaTime());
+        ratioManager.updateRatioFragments();
+
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);
 
