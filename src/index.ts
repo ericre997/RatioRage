@@ -219,7 +219,6 @@ function startRenderLoop() {
 
         movePlayer();
 
-
         let collided = ratioManager.checkForCollision(player.getPosition());
         if(collided) {
             collided.explode(scene);
@@ -227,6 +226,8 @@ function startRenderLoop() {
 
         ratioManager.spinRatios(engine.getDeltaTime());
         ratioManager.updateRatioFragments();
+
+       // barrelManager.spinBarrels(engine.getDeltaTime());
 
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);

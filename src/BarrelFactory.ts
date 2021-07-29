@@ -2,16 +2,15 @@ import { Scene } from "@babylonjs/core/scene";
 import { Mesh, InstancedMesh } from "@babylonjs/core/Meshes";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { ParticleHelper } from "@babylonjs/core/Particles";
-import { Ratio } from "./Ratio";
 import { ExplodableMeshInstance } from "./ExplodableMeshInstance";
 import { BarrelInstance } from "./BarrelInstance";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 
 export class BarrelFactory {
-    public readonly explosionTTL : number = 3000;
-    public readonly barrelHeight : number = 3.1196;
+    public readonly explosionTTL = 3000;
+    public readonly barrelHeight = 3.1196;
+    public readonly scaling = .6;
 
     public numCreated : number = 0;
     public wholeMeshes : Array<Mesh> = new Array<Mesh>();
@@ -34,9 +33,6 @@ export class BarrelFactory {
                     thisMesh.isVisible = false;
                     thisMesh.isPickable = false;
                     thisMesh.parent = null;
-                 //   let mat = new StandardMaterial("test", scene);
-                 //   mat.diffuseColor.r = 1;
-                 //   thisMesh.material = mat;
                     if(thisMesh.name.startsWith("BarrelWhole")) {
                         this.wholeMeshes.push(thisMesh);
                     } else if (thisMesh.name.startsWith("BarrelPiece")) {
@@ -50,10 +46,10 @@ export class BarrelFactory {
     public createBarrelInstanceAsync(scene : Scene) : Promise<BarrelInstance> {
 
         let barrelId = this.numCreated++;
-        let root = new Mesh("barrel_root_" + barrelId, scene);
-        root.position.y = this.barrelHeight / 2;
+        // place barrel in the middle of the mesh instance.
+        let barrelRoot = new Mesh("barrel_root" + barrelId, scene);
 
-        // create the whole number instance
+        // create the whole barrel instances
         let solids = new Array<InstancedMesh>();
         for(let i = 0; i < this.wholeMeshes.length; i++) {
             let thisSolid = this.wholeMeshes[i].createInstance("barrel_whole_" + barrelId);
@@ -68,15 +64,19 @@ export class BarrelFactory {
             fragments.push(thisFragment);
         }
 
-        // create explodable instance            
-        let explodableInstance = new ExplodableMeshInstance(this.explosionTTL, root, solids, fragments);
+        // create explodable instance
+        let xmroot =  new Mesh("xm_root_" + barrelId, scene);    
+        xmroot.position.y -= this.barrelHeight/2;
+        xmroot.parent = barrelRoot;        
+        let explodableInstance = new ExplodableMeshInstance(this.explosionTTL, xmroot, solids, fragments);
+        //explodableInstance.position.y += 0; //
 
         ParticleHelper.BaseAssetsUrl = "particles";
         return ParticleHelper.CreateAsync("explosion", scene).then((set)=> {
-            let barrelInstance = new BarrelInstance(this.explosionTTL, root, explodableInstance, set);
-            barrelInstance.scale = barrelInstance.scaling.multiplyByFloats(.6, .6, .6);
+            let barrelInstance = new BarrelInstance(this.explosionTTL, barrelRoot, explodableInstance, set);
+            barrelInstance.scale = barrelInstance.scaling.multiplyByFloats(this.scaling, this.scaling, this.scaling);
+            barrelInstance.position.y += (this.barrelHeight * this.scaling)/2;
             return barrelInstance;
         });
-
     }
 }                        

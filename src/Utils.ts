@@ -1,3 +1,6 @@
+import { Vector3 } from "@babylonjs/core/Maths/math";
+import { InstancedMesh } from "@babylonjs/core/Meshes";
+
 export class Utils {
 
     public static getRandomInteger(minValueInclusive : number, maxValueExclusive : number) : number {
@@ -27,4 +30,6 @@ export class Utils {
         }
         return array;
     }
+
+
 }

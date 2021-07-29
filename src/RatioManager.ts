@@ -32,7 +32,7 @@ export class RatioManager {
     }
 
     public spinRatios(deltaTime : number) : void {
-        let amount = Constants.RATIO_SPIN_RADIANS_PER_MINUTE * deltaTime / (60 * 60 * 1000);
+        let amount = Constants.RATIO_SPIN_RADIANS_PER_MS * deltaTime;
         for(let i = 0; i < this.ratioInstances.length; i++) {
             let ratioInstance = this.ratioInstances[i];
             if(!ratioInstance.isExploded) {
@@ -68,10 +68,11 @@ export class RatioManager {
         let seedRatio = Ratio.getSeedRatio();
         let factors = [2,3,4,5,6,7,8,9,10];
         
-        this.equivalentRatios = Ratio.getEquivalentRatios(seedRatio, 3, factors);
+        let numRatios = Constants.NUM_EQUIVALENT_RATIOS - 1;
+        this.equivalentRatios = Ratio.getEquivalentRatios(seedRatio, numRatios, factors);
         this.equivalentRatios.push(seedRatio);
     
-        this.nonEquivalentRatios = Ratio.getNonEquivalentRatios(seedRatio, 5);
+        this.nonEquivalentRatios = Ratio.getNonEquivalentRatios(seedRatio, Constants.NUM_NONEQUIVALENT_RATIOS);
     }
 
     private createRatioInstancesAsync(env : Environment, scene : Scene) : Promise<any> {

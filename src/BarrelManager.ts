@@ -1,5 +1,5 @@
 import { Scene } from "@babylonjs/core/scene";
-import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
+import { Color3, Vector3, Axis } from "@babylonjs/core/Maths/math";
 import { Environment } from "./Environment";
 import { BarrelFactory } from "./BarrelFactory";
 import { BarrelInstance } from "./BarrelInstance";
@@ -20,6 +20,16 @@ export class BarrelManager {
         return promise;
     }
 
+    public spinBarrels(deltaTime : number) : void {
+        let amount = Constants.RATIO_SPIN_RADIANS_PER_MS * deltaTime;
+        for(let i = 0; i < this.barrelInstances.length; i++) {
+            let barrelInstance = this.barrelInstances[i];
+            if(!barrelInstance.isExploded) {
+                barrelInstance.rotate(Axis.X, amount);
+            }
+        }
+    }
+
     private createBarrelInstancesAsync(env : Environment, ratioPositions : Vector3[], scene : Scene) : Promise<any> {
         let promises = new Array<Promise<any>>();
     
@@ -28,8 +38,9 @@ export class BarrelManager {
 
         for(let i = 0; i < Constants.NUM_BARRELS; i++){
             let thisPromise = this.barrelFactory.createBarrelInstanceAsync(scene).then( (inst) => {
+                let y = inst.position.y;
                 inst.position = this.selectBarrelPosition(candidatePositions, Constants.MIN_D2_BARREL_BARREL_PLACEMENT)
-                inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
+                inst.position.y = y + env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
                 this.barrelInstances.push(inst);
             })
             promises.push(thisPromise);
@@ -40,10 +51,6 @@ export class BarrelManager {
     
 
     private getCandidatePositionsForBarrelPlacement(env : Environment, ratioPositions : Vector3[]) : Vector3[]{
-        // get set of possible positions for placement
-        let minHeight = Constants.MIN_HEIGHT_FOR_BARREL_PLACEMENT;
-        let minD2TreeBarrel = Constants.MIN_D2_TREE_BARREL_PLACEMENT;
-        let minD2RatioBarrel = Constants.MIN_D2_RATIO_BARREL_PLACEMENT;
 
         // note:  these are returned with zeroed y 
         let candidatePositions = env.colorMap.getPositions((color: Color3) => { return true; })
@@ -58,13 +65,13 @@ export class BarrelManager {
         }
 
         for(let i = candidatePositions.length - 1; i >= 0; i--) {
-            if(env.groundMesh.getHeightAtCoordinates(candidatePositions[i].x, candidatePositions[i].z) < minHeight ) {
+            if(env.groundMesh.getHeightAtCoordinates(candidatePositions[i].x, candidatePositions[i].z) < Constants.MIN_HEIGHT_FOR_BARREL_PLACEMENT) {
                 candidatePositions.splice(i, 1);
             }
-            else if (this.isValidPlacement(candidatePositions[i], treePositions, Constants.MIN_D2_TREE_BARREL_PLACEMENT)) {
+            else if (!this.isValidPlacement(candidatePositions[i], treePositions, Constants.MIN_D2_TREE_BARREL_PLACEMENT)) {
                 candidatePositions.splice(i, 1);
             }
-            else if (this.isValidPlacement(candidatePositions[i], ratioPositions, Constants.MIN_D2_RATIO_BARREL_PLACEMENT)) {
+            else if (!this.isValidPlacement(candidatePositions[i], ratioPositions, Constants.MIN_D2_RATIO_BARREL_PLACEMENT)) {
                 candidatePositions.splice(i, -1);
             }
         }
