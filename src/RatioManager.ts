@@ -10,12 +10,15 @@ import { Utils } from "./Utils";
 
 export class RatioManager {
 
-    private equivalentRatios = new Array<Ratio>();
-    private nonEquivalentRatios = new Array<Ratio>();
+    public equivalentRatios = new Array<Ratio>();
+    public nonEquivalentRatios = new Array<Ratio>();
     
     private ratioFactory : RatioFactory; 
-    private ratioInstances = new Array<RatioInstance>();
+    public ratioInstances = new Array<RatioInstance>();
 
+    public get targetRatio() : Ratio {
+        return this.equivalentRatios[this.equivalentRatios.length - 1];
+    }
 
     public initialize(env : Environment, scene : Scene) : Promise<any> {
         let promise = RatioFactory.create(scene)
@@ -59,6 +62,8 @@ export class RatioManager {
         }
     }
 
+    // TODO:  consolidate ratio generation code.  Consider moving a bunch of the 
+    // constants into Constants.
     private generateRatios(){
         let seedRatio = Ratio.getSeedRatio();
         let factors = [2,3,4,5,6,7,8,9,10];

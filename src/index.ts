@@ -43,21 +43,8 @@ import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPi
 import { BarrelFactory } from "./BarrelFactory";
 import { BarrelInstance } from "./BarrelInstance";
 import { Utils } from "./Utils";
+import { BarrelManager } from "./BarrelManager";
 
-
-
-var equivalentRatios;
-var nonEquivalentRatios;
-
-function generateRatios(){
-    let seedRatio = Ratio.getSeedRatio();
-    let factors = [2,3,4,5,6,7,8,9,10];
-    
-    equivalentRatios = Ratio.getEquivalentRatios(seedRatio, 3, factors);
-    equivalentRatios.push(seedRatio);
-
-    nonEquivalentRatios = Ratio.getNonEquivalentRatios(seedRatio, 5);
-}
 
 function createPlayer(scene: Scene, env: Environment) {
     let playerSize = 1;
@@ -73,7 +60,6 @@ function createPlayer(scene: Scene, env: Environment) {
 
     return player;
  }
-
 
 /// begin code!
 
@@ -116,22 +102,13 @@ sphere.parent = null;
 
 // set up HUD
 let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-// doing this messes up UX layout.  Just manually specify scaling for UX elements.
-//advancedTexture.rootContainer.scaleX = window.devicePixelRatio;
-//advancedTexture.rootContainer.scaleY = window.devicePixelRatio;
-
 let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
-/*
-let numberFactory; 
-let ratios = new Array<RatioInstance>();
-*/
-let ratioManager  = new RatioManager();
 
-let barrelFactory;
-let barrels = new Array<BarrelInstance>();
+let barrelManager = new BarrelManager();
+let ratioManager  = new RatioManager();
 
 let env = new Environment();
 let player : Player;
@@ -139,41 +116,39 @@ let player : Player;
 let elapsedTime = new ElapsedTime();
 let score = 0;
 
-function createBarrelInstancesAsync() : Promise<any> {
-    let promises = new Array<Promise<any>>();
 
-    let thisPromise = barrelFactory.createBarrelInstanceAsync(scene).then( (inst) => {
-        inst.position.x = 0;
-        inst.position.z = -36;
-        inst.position.y = env.groundMesh.getHeightAtCoordinates(inst.position.x, inst.position.z);
-        barrels.push(inst);
-    })
-    promises.push(thisPromise);
-
-    return Promise.all(promises);
+function getFlattenedRatioPositions() : Vector3[] {
+    let positions = new Array<Vector3>();
+    for(let i = 0; i < ratioManager.ratioInstances.length; i++){
+        let thisPosition = ratioManager.ratioInstances[i].position.clone();
+        thisPosition.y = 0;
+        positions.push(thisPosition);
+    }
+    return positions;
 }
+
 
 env.setup(scene, () => { 
     player = createPlayer(scene, env); 
     
-    generateRatios();
-    diagnostics.updateEquivalentRatios(equivalentRatios);
-    diagnostics.updateNonEquivalentRatios(nonEquivalentRatios);
-    
     elapsedTime.start();
 
-    gameOverlay.updateTargetRatio(equivalentRatios[equivalentRatios.length-1]);
-
-    BarrelFactory.create(scene).then((result) => {
-        barrelFactory = result;
-    }).then( () => {
-        return createBarrelInstancesAsync();
-    }).then( () => {
-        return ratioManager.initialize(env, scene);
-    }).then( () => {
-        startRenderLoop();
-    });
+    ratioManager.initialize(env, scene)
+        .then( () => {
+            let ratioPositions = getFlattenedRatioPositions();
+            return barrelManager.initialize(env, ratioPositions, scene);
+        })
+        .then( () => {
+            diagnostics.updateEquivalentRatios(ratioManager.equivalentRatios);
+            diagnostics.updateNonEquivalentRatios(ratioManager.nonEquivalentRatios);
+            gameOverlay.updateTargetRatio(ratioManager.targetRatio);
+    
+            startRenderLoop();
+        });
 });
+
+
+
 
 // decals
 let targetDecalManager = new WaypointManager(scene);
@@ -196,11 +171,6 @@ function movePlayer() {
 function pointerUp() {}
 function pointerMove() {}
 function pointerDown(pickInfo : PickingInfo) {
-
-    if(barrels[0]) {
-        barrels[0].explode(scene);
-        barrels[0] = null;
-    }        
 
     if(pickInfo.pickedMesh === env.groundMesh) {
 

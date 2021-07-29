@@ -47,7 +47,7 @@ export class BarrelFactory {
     }
 
 
-    public createBarrelInstanceAsync(scene : Scene) : Promise<void | BarrelInstance> {
+    public createBarrelInstanceAsync(scene : Scene) : Promise<BarrelInstance> {
 
         let barrelId = this.numCreated++;
         let root = new Mesh("barrel_root_" + barrelId, scene);

@@ -6,4 +6,10 @@ export class Constants {
 
     static readonly RATIO_SPIN_RADIANS_PER_MINUTE = -30 * 100;
 
+    static readonly NUM_BARRELS = 10;
+    static readonly MIN_HEIGHT_FOR_BARREL_PLACEMENT = 1;
+    static readonly MIN_D2_TREE_BARREL_PLACEMENT = 1;
+    static readonly MIN_D2_RATIO_BARREL_PLACEMENT = 4;
+    static readonly MIN_D2_BARREL_BARREL_PLACEMENT = 4;
+
 }
