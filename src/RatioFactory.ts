@@ -5,7 +5,7 @@ import { ParticleHelper } from "@babylonjs/core/Particles";
 import { Ratio } from "./Ratio";
 import { ExplodableMeshInstance } from "./ExplodableMeshInstance";
 import { RatioInstance } from "./RatioInstance";
-
+import { Constants } from "./Constants";
 
 export class RatioFactory {
     public readonly explosionTTL : number = 3000;
@@ -74,15 +74,15 @@ export class RatioFactory {
 
     public createRatioInstanceAsync(scene : Scene, ratio : Ratio) : Promise<RatioInstance> {
 
-        let root = new Mesh("R_" + this.numCreated++, scene);
+        let ratioInstanceId = this.numCreated++;
+        let root = new Mesh(Constants.RATIO_ROOT_PREFIX + ratioInstanceId, scene);
 
         // create instances
-        let numerator = this.createExplodableNumberInstances(ratio.numerator, root, scene);
-        let denominator = this.createExplodableNumberInstances(ratio.denominator, root, scene);
+        let numerator = this.createExplodableNumberInstances(ratio.numerator, root, ratioInstanceId, scene);
+        let denominator = this.createExplodableNumberInstances(ratio.denominator, root, ratioInstanceId, scene);
         let numDigits = Math.max(numerator.length, denominator.length);
-        let bar = this.createExplodableBarInstance(numDigits, root, scene);
+        let bar = this.createExplodableBarInstance(numDigits, root, ratioInstanceId, scene);
 
-        // TODO:  move positioning stuff into RatioInstance constructor.
         const widthPerChar = .9;
         
         // position instances:
@@ -109,26 +109,26 @@ export class RatioFactory {
 
     }
 
-    private createExplodableNumberInstances(num : number, ratioRoot : Mesh, scene : Scene) : Array<ExplodableMeshInstance> {
+    private createExplodableNumberInstances(num : number, ratioRoot : Mesh, ratioInstanceId : number, scene : Scene) : Array<ExplodableMeshInstance> {
         let instances = Array<ExplodableMeshInstance>();
 
         do {
             let thisDigit = Math.trunc(num % 10);
 
             // create root for the digit instance
-            let numberRoot = new Mesh("number_root_" + this.numCreated++, scene);
+            let numberRoot = new Mesh(Constants.RATIO_EXP_ROOT_PREFIX + ratioInstanceId, scene);
             numberRoot.parent = ratioRoot;
 
             // create the whole number instance
             let solids = new Array<InstancedMesh>();
-            solids.push(this.numberMeshes[thisDigit].createInstance("NI_" + this.numCreated++));
+            solids.push(this.numberMeshes[thisDigit].createInstance(Constants.RATIO_WHOLE_PREFIX + ratioInstanceId));
 
             // create set of fragments
             let fragmentMeshes = this.numberFragmentMeshes[thisDigit];
             let fragments = new Array<InstancedMesh>();
 
             for(let i = 0; i < fragmentMeshes.length; i++){
-                let thisFragment = fragmentMeshes[i].createInstance("NFI_" + this.numCreated++);
+                let thisFragment = fragmentMeshes[i].createInstance(Constants.RATIO_FRAGMENT_PREFIX + ratioInstanceId);
                 fragments.push(thisFragment);
             }
 
@@ -146,24 +146,24 @@ export class RatioFactory {
         return instances.reverse();
     }
 
-    private createExplodableBarInstance(numDigits: number, ratioRoot : Mesh, scene : Scene) : ExplodableMeshInstance {
+    private createExplodableBarInstance(numDigits: number, ratioRoot : Mesh, ratioInstanceId : number, scene : Scene) : ExplodableMeshInstance {
 
         // note:  we have four sizes of bars at indices 0-3
         let idx = Math.min(numDigits, 3);
 
-        let barRoot = new Mesh("bar_root_" + this.numCreated++, scene);
+        let barRoot = new Mesh(Constants.RATIO_EXP_ROOT_PREFIX + ratioInstanceId, scene);
         barRoot.parent = ratioRoot;
 
         // solid
         let solids = new Array<InstancedMesh>();
-        solids.push(this.barMeshes[idx].createInstance("BI_" + this.numCreated));
+        solids.push(this.barMeshes[idx].createInstance(Constants.RATIO_WHOLE_PREFIX + ratioInstanceId));
 
         // fragments
         let fragmentMeshes = this.barFragmentMeshes[idx];
         let fragments = new Array<InstancedMesh>();
 
         for(let i = 0; i < fragmentMeshes.length; i++){
-            let thisFragment = fragmentMeshes[i].createInstance("BFI_" + this.numCreated++);
+            let thisFragment = fragmentMeshes[i].createInstance(Constants.RATIO_FRAGMENT_PREFIX + ratioInstanceId);
             fragments.push(thisFragment);
         }
 

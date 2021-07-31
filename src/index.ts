@@ -168,7 +168,7 @@ function movePlayer() {
 
 function pointerUp() {}
 function pointerMove() {}
-function pointerDown(pickInfo : PickingInfo) {
+function leftMouseButtonDown(pickInfo : PickingInfo) {
 
     if(pickInfo.pickedMesh === env.groundMesh) {
 
@@ -188,13 +188,26 @@ function pointerDown(pickInfo : PickingInfo) {
     }
 }
 
+function rightMouseButtonDown(pickInfo : PickingInfo) {
+    if(pickInfo.pickedMesh === env.groundMesh 
+       || pickInfo.pickedMesh.name.startsWith(Constants.BARREL_WHOLE_PREFIX)
+       || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
+        alert("hello");
+        // throw barrel at picked point
+    }
+}
+
 scene.onPointerObservable.add((pointerInfo) => {
     switch (pointerInfo.type) {
         case PointerEventTypes.POINTERDOWN:
-            if(0 === pointerInfo.event.button 
+            if(Constants.LEFT_MOUSE_BUTTON === pointerInfo.event.button 
                 && pointerInfo.pickInfo.hit) {
-                pointerDown(pointerInfo.pickInfo);
+                leftMouseButtonDown(pointerInfo.pickInfo);
+            } else if (Constants.RIGHT_MOUSE_BUTTON === pointerInfo.event.button
+                && pointerInfo.pickInfo.hit) {
+                rightMouseButtonDown(pointerInfo.pickInfo);
             }
+
         break;
         case PointerEventTypes.POINTERUP:
             pointerUp();
