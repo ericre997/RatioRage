@@ -51,8 +51,8 @@ export class Player {
         if(Vector3.DistanceSquared(barrelInstance.position, this.getPosition()) <= Constants.MIN_D2_PLAYER_BARREL_PICKUP) {
             this.barrel = barrelInstance;
             barrelInstance.parent = this.playerMesh;
-            barrelInstance.rotate(Axis.X, 45 * Constants.RADIANS_PER_DEGREE);
-            barrelInstance.position = new Vector3(-this.playerSize/2, this.playerSize/2, 0);
+            barrelInstance.rotate(Axis.X, -45 * Constants.RADIANS_PER_DEGREE);
+            barrelInstance.position = new Vector3(this.playerSize/2, this.playerSize/2, 0);
         }
     }
 
@@ -130,9 +130,15 @@ export class Player {
         this.rightMesh.color = new Color3(0, 0, 1);
     }
 
+ 
     private updateAxisLines() {
         const LINE_LENGTH = 3;
+
+        // NOTE:  need to compute the world matrix for the mesh in order to recalculate 'forward' to include any
+        // rotations that might have occurred during this render cycle.  If we don't do this, forward/up/right won't be updated
+        // until the next frame.
         this.playerMesh.computeWorldMatrix(true);
+
         let points = new Array<Vector3>();
         points.push(this.playerMesh.position);
         points.push(this.playerMesh.position.add(this.playerMesh.forward.scale(LINE_LENGTH)));
