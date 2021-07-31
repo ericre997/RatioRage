@@ -1,6 +1,8 @@
 export class Constants {
     static readonly RADIANS_PER_REVOLUTION = 6.28319;
-    
+    static readonly DEGREES_PER_RADIAN = 360 / Constants.RADIANS_PER_REVOLUTION;
+    static readonly RADIANS_PER_DEGREE = Constants.RADIANS_PER_REVOLUTION / 360;
+
     static readonly NUM_EQUIVALENT_RATIOS = 4;
     static readonly NUM_NONEQUIVALENT_RATIOS = 6;
 
@@ -19,5 +21,6 @@ export class Constants {
 
 
     static readonly MIN_D2_PLAYER_BARREL_PICKUP = 1;
+    static readonly MIN_D2_PLAYER_ELEVATION = .1;
 
 }

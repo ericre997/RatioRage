@@ -44,22 +44,9 @@ import { BarrelFactory } from "./BarrelFactory";
 import { BarrelInstance } from "./BarrelInstance";
 import { Utils } from "./Utils";
 import { BarrelManager } from "./BarrelManager";
+import { Constants } from "./Constants"
+import { AxesViewer } from "@babylonjs/core/debug";
 
-
-function createPlayer(scene: Scene, env: Environment) {
-    let playerSize = 1;
-    let walkSpeed = 20 / 1000;  // units per millisecond
-
-    let posX = 31;
-    let posZ = -1.5;
-    let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
-    let startPosition = new Vector3(posX, posY + playerSize / 2, posZ);
-
-    player = Player.create(scene, playerSize, walkSpeed);
-    player.placePlayerAt(env, startPosition);
-
-    return player;
- }
 
 /// begin code!
 
@@ -147,13 +134,24 @@ env.setup(scene, () => {
         });
 });
 
+function createPlayer(scene: Scene, env: Environment) {
+    let playerSize = 1;
+    let walkSpeed = 20 / 1000;  // units per millisecond
+
+    let posX = 31;
+    let posZ = -1.5;
+    let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
+    let startPosition = new Vector3(posX, posY + playerSize / 2, posZ);
+
+    player = Player.create(scene, playerSize, walkSpeed);
+    player.placePlayerAt(env, startPosition);
+    return player;
+ }
 
 
 
 // decals
 let targetDecalManager = new WaypointManager(scene);
-
-const MIN_PLAYER_HEIGHT : number = .1;
 
 function movePlayer() {
     // TODO:  easing
@@ -162,7 +160,7 @@ function movePlayer() {
     // TODO:  go around obstacles.
     let waypoint = targetDecalManager.getNextWaypoint();
     if(waypoint) {
-        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), MIN_PLAYER_HEIGHT);
+        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), Constants.MIN_D2_PLAYER_ELEVATION);
     }        
 }
 
@@ -183,6 +181,8 @@ function pointerDown(pickInfo : PickingInfo) {
         diagnostics.update(pickInfo.pickedPoint, color);
 
         targetDecalManager.buildDecal(env.groundMesh, pickInfo.pickedPoint, pickInfo.getNormal());
+
+        player.pointPlayerAt(pickInfo.pickedPoint);
 
         score += 1;
     }
@@ -213,11 +213,26 @@ scene.onPointerObservable.add((pointerInfo) => {
 // TODO:  camera following ball
 
 
+
+function checkForBarrelPickup(){
+    if( player.barrel ) {
+        return;
+    } else {
+        let collided = barrelManager.checkForCollision(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
+        if(collided) {
+            player.pickUpBarrel(collided);
+        }
+    }
+}
+
+
+
 function startRenderLoop() {
 
     engine.runRenderLoop(()=> {
 
         movePlayer();
+        checkForBarrelPickup();
 
         let collided = ratioManager.checkForCollision(player.getPosition());
         if(collided) {

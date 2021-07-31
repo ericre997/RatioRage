@@ -43,7 +43,8 @@ export class WaypointManager {
         material.diffuseColor = new Color3(1,0,0);
         material.opacityTexture = new DynamicTexture("taretOpacityTexture", {width:this.targetSize, height:this.targetSize}, scene, false);
         material.zOffset = -2;
-
+        material.specularColor = new Color3(0,0,0);
+        
         this.intervalId = window.setInterval(() => { this.drawWaypoint(); }, this.targetUpdatePeriod);
         
         return material

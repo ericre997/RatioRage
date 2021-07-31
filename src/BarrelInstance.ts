@@ -35,6 +35,10 @@ export class BarrelInstance {
         this.root.position.z = pos.z;
     }
 
+    public set parent(mesh : Mesh) {
+        this.root.parent = mesh;
+    }
+
     public rotate(axis : Vector3, radians : number) {
         this.root.rotate(axis, radians)
     }

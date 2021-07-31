@@ -1,8 +1,15 @@
 import { Scene } from "@babylonjs/core/scene";
-import { Mesh } from "@babylonjs/core/Meshes";
+import { Mesh, LinesMesh } from "@babylonjs/core/Meshes";
 import { NormalMaterial } from "@babylonjs/materials";
-import { Vector3 } from "@babylonjs/core/Maths/math";
+import { Vector3, Axis, Space, Color3 } from "@babylonjs/core/Maths/math";
 import { Environment } from "./Environment";
+import { Constants } from "./Constants";
+import { BarrelInstance } from "./BarrelInstance";
+import { AxesViewer } from "@babylonjs/core/debug";
+
+// range = Math.power(v, 2) * Math.sin(2 * angle) / g
+// https://www.omnicalculator.com/physics/projectile-motion
+// https://en.wikipedia.org/wiki/Range_of_a_projectile
 
 export class Player {
 
@@ -10,7 +17,12 @@ export class Player {
     public readonly walkSpeed : number;
     public readonly minMoveDistance = .1;
 
+    public barrel : BarrelInstance;
+
     private playerMesh : Mesh;
+    private forwardMesh : LinesMesh;
+    private upMesh : LinesMesh;
+    private rightMesh : LinesMesh;
 
     private constructor(playerSize: number, walkSpeed: number) {
         this.playerSize = playerSize;
@@ -21,6 +33,7 @@ export class Player {
         return this.playerMesh.position;
     }
 
+
     public static create(scene : Scene, playerSize: number, walkSpeed: number) {
         let player = new Player(playerSize, walkSpeed);
 
@@ -28,8 +41,21 @@ export class Player {
         player.playerMesh.material = new NormalMaterial("tmp_player_material", scene);
         player.playerMesh.parent = null;
 
+        player.createAxisLines(scene);
+        player.updateAxisLines();
+
         return player;
     }
+
+    public pickUpBarrel(barrelInstance : BarrelInstance) {
+        if(Vector3.DistanceSquared(barrelInstance.position, this.getPosition()) <= Constants.MIN_D2_PLAYER_BARREL_PICKUP) {
+            this.barrel = barrelInstance;
+            barrelInstance.parent = this.playerMesh;
+            barrelInstance.rotate(Axis.X, 45 * Constants.RADIANS_PER_DEGREE);
+            barrelInstance.position = new Vector3(-this.playerSize/2, this.playerSize/2, 0);
+        }
+    }
+
 
     public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {
         let targetPosition = surfaceTargetPosition.clone();
@@ -48,7 +74,6 @@ export class Player {
         let proposedDelta = direction.multiplyByFloats(distanceToMove, distanceToMove, distanceToMove);
         let proposedPosition = this.playerMesh.position.add(proposedDelta);
         
-   //     proposedPosition = this.getProposedPosition(env, proposedPosition.x, proposedPosition.z, minDestHeight);
         let heightAtProposed = env.groundMesh.getHeightAtCoordinates(proposedPosition.x, proposedPosition.z);
         if(heightAtProposed < minDestHeight) {
             return;
@@ -64,15 +89,74 @@ export class Player {
         //let finalPosition = proposedPosition;
         let finalPosition = adjustedFinalPosition;
         this.placePlayerAt(env, finalPosition);
+
+        //this.updateAxisLines();
+    }
+    //https://math.stackexchange.com/questions/555198/find-direction-of-angle-between-2-vectors
+    //https://math.stackexchange.com/questions/2510897/calculate-the-angle-between-two-vectors-when-direction-is-important
+    public pointPlayerAt(targetPosition: Vector3) {
+        let flatTargetPos = targetPosition.clone();
+        flatTargetPos.y = 0;
+        let flatPlayerPos = this.getPosition().clone();
+        flatPlayerPos.y = 0;
+
+        let directionToTarget = flatTargetPos.subtract(flatPlayerPos);
+        directionToTarget.normalize();
+        let facing = this.playerMesh.forward.clone();
+        facing.y = 0;
+        facing.normalize();
+
+        // calculate directional angle
+        let angle = Math.atan2(directionToTarget.x * facing.z - directionToTarget.z * facing.x,
+                               directionToTarget.x * facing.x + directionToTarget.z * facing.z);
+ 
+        this.playerMesh.rotate(Axis.Y, angle, Space.WORLD); 
+
+        //this.updateAxisLines();
+    }
+
+    private createAxisLines(scene : Scene) {
+        const LINE_LENGTH = 3;
+        let points = new Array<Vector3>();
+        points.push(this.playerMesh.position);
+        points.push(this.playerMesh.position.add(this.playerMesh.forward.scale(LINE_LENGTH)));
+        this.forwardMesh = Mesh.CreateLines("forward", points, scene, true);
+        this.forwardMesh.color = new Color3(1, 0, 0);
+        points[1] = this.playerMesh.position.add(this.playerMesh.up.scale(LINE_LENGTH));
+        this.upMesh = Mesh.CreateLines("up", points, scene, true);
+        this.upMesh.color = new Color3(0, 1, 0);
+        points[1] = this.playerMesh.position.add(this.playerMesh.right.scale(LINE_LENGTH));
+        this.rightMesh = Mesh.CreateLines("right", points, scene, true);
+        this.rightMesh.color = new Color3(0, 0, 1);
+    }
+
+    private updateAxisLines() {
+        const LINE_LENGTH = 3;
+        this.playerMesh.computeWorldMatrix(true);
+        let points = new Array<Vector3>();
+        points.push(this.playerMesh.position);
+        points.push(this.playerMesh.position.add(this.playerMesh.forward.scale(LINE_LENGTH)));
+        this.forwardMesh = Mesh.CreateLines(null, points, null, null, this.forwardMesh);
+        points[1] = this.playerMesh.position.add(this.playerMesh.up.scale(LINE_LENGTH));
+        this.upMesh = Mesh.CreateLines(null, points, null, null, this.upMesh);
+        points[1] = this.playerMesh.position.add(this.playerMesh.right.scale(LINE_LENGTH));
+        this.rightMesh = Mesh.CreateLines(null, points, null, null, this.rightMesh);
     }
 
     public placePlayerAt(env: Environment, position: Vector3){
         this.playerMesh.position = position;
+        this.updateAxisLines();
 
         let surfaceNormal = env.groundMesh.getNormalAtCoordinates(position.x, position.z);
-        let rotationAxis = Vector3.Cross(surfaceNormal, this.playerMesh.up).normalize();
-        let angle = Math.acos(Vector3.Dot(surfaceNormal, this.playerMesh.up));
-        this.playerMesh.rotate(rotationAxis, angle); 
+        // TODO:  hrmmm... there is some kind of bug here that will occasionally cause the rotation to go wacky.
+        // just gonna comment it out for now since the final model won't need it anyway.  Would be good to understand
+        // what's up though.  
+
+    //    let rotationAxis = Vector3.Cross(surfaceNormal, this.playerMesh.up).normalize();
+    //    let angle = Math.acos(Vector3.Dot(surfaceNormal, this.playerMesh.up));
+    //    this.playerMesh.rotate(rotationAxis, angle); 
+
+        this.updateAxisLines();
     }
     
     /*  Hmm... this is pretty jerky.  Also, the player seems to sometimes be able to fall through the map.

@@ -30,6 +30,15 @@ export class BarrelManager {
         }
     }
 
+    public checkForCollision(playerPosition : Vector3, minD2 : number) : BarrelInstance {
+        for(let i = 0; i < this.barrelInstances.length; i++) {
+            if(Vector3.DistanceSquared(playerPosition, this.barrelInstances[i].position) <= minD2) {
+                return this.barrelInstances[i];
+            }
+        }
+        return null;
+    }
+
     private createBarrelInstancesAsync(env : Environment, ratioPositions : Vector3[], scene : Scene) : Promise<any> {
         let promises = new Array<Promise<any>>();
     
