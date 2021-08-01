@@ -58,16 +58,12 @@ export class Player {
     }
 
     public throwBarrel(targetPoint: Vector3, scene : Scene) {
-        // de-parent barrel from player
-        let barrel = this.barrel;
-      //  this.barrel = null;
 
-        // calculate initial velocity and direction needed to hit target 
-        // get world position of barrel
+        // get world position of barrel.  we will need to set after deparenting
         let scale = new Vector3();
         let rotation = new Quaternion();
         let position = new Vector3();
-        barrel.root.getWorldMatrix().decompose(scale, rotation, position);
+        this.barrel.root.getWorldMatrix().decompose(scale, rotation, position);
 
         let dist = targetPoint.subtract(position);
         let acc = -9.8;
@@ -79,27 +75,36 @@ export class Player {
 
         let v = Math.sqrt( (1/(dv - (sin * du / cos))) * (acc*du*du) / (2*cos*cos) );
 
-        // separate barrel and player
-        barrel.isPickUpable = false;
-        let b = barrel.root;
-        b.parent = null;
+        // set no-pickup flag so we don't grab
+        // the barrel back as soon as we throw it!
+        this.barrel.isPickUpable = false;
 
+        // separate barrel and player
+        let thisBarrel = this.barrel;
+        let barrelRoot = thisBarrel.root;
+
+        barrelRoot.parent = null;
         this.barrel = null;
 
-        b.position = position;
-        b.rotationQuaternion = rotation;
-        b.scaling = scale;
-        b.physicsImpostor = new PhysicsImpostor(b, PhysicsImpostor.ParticleImpostor, {mass: 2, friction:0, restitution:0}, scene);
+        // set transforms
+        barrelRoot.position = position;
+        barrelRoot.rotationQuaternion = rotation;
+        barrelRoot.scaling = scale;
+
+        // create impostoror
+        barrelRoot.physicsImpostor = new PhysicsImpostor(barrelRoot, PhysicsImpostor.ParticleImpostor, {mass: 2, friction:0, restitution:0}, scene);
         
-        // TODO:  set the direction correctly!
-        // give set initial velocity for barrel
-        let linearVelocity = new Vector3(v * cos, v * sin, 0);
-        b.physicsImpostor.setLinearVelocity(linearVelocity);
+        // set the linear velocity
+        let direction = dist.clone();
+        direction.y = 0;
+        direction = direction.normalize();
+        let linearVelocity = new Vector3(v * cos * direction.x, v * sin, v * cos * direction.z);
+        barrelRoot.physicsImpostor.setLinearVelocity(linearVelocity);
 
         // give random spin
         const ROT = 4;
         let angularVelocity = new Vector3( ROT * (Math.random() - .5), ROT * (Math.random() - .5), ROT * (Math.random() - .5) )        
-        b.physicsImpostor.setAngularVelocity(angularVelocity);
+        barrelRoot.physicsImpostor.setAngularVelocity(angularVelocity);
 
         // TODO:  set pre-render routine to detect collisions/trigger explosion/update score.
 

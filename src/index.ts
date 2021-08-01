@@ -248,7 +248,6 @@ function checkForBarrelPickup(){
 }
 
 
-
 function startRenderLoop() {
 
     engine.runRenderLoop(()=> {
