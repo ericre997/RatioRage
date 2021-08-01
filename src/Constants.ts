@@ -37,4 +37,8 @@ export class Constants {
     static readonly MIN_D2_PLAYER_BARREL_PICKUP = 1;
     static readonly MIN_D2_PLAYER_ELEVATION = .1;
 
+    static readonly MIN_D_BARREL_GROUND_EXPLODE = .5
+    static readonly MIN_D2_BARREL_BARREL_EXPLODE = 1;
+    static readonly MIN_D2_BARREL_RATIO_EXPLODE = 1;
+
 }

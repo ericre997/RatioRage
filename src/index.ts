@@ -160,14 +160,14 @@ function createPlayer(scene: Scene, env: Environment) {
 
 
 // decals
-let targetDecalManager = new WaypointManager(scene);
+let waypointManager = new WaypointManager(scene);
 
 function movePlayer() {
     // TODO:  easing
     // TODO:  allow for multiple waypoints (i.e. remove current waypoint if hit?)
     // TODO:  adjust speed based on terrain?
     // TODO:  go around obstacles.
-    let waypoint = targetDecalManager.getNextWaypoint();
+    let waypoint = waypointManager.getNextWaypoint();
     if(waypoint) {
         player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), Constants.MIN_D2_PLAYER_ELEVATION);
     }        
@@ -189,7 +189,7 @@ function leftMouseButtonDown(pickInfo : PickingInfo) {
         let color = env.colorMap.getColorAtPosition(pickInfo.pickedPoint);
         diagnostics.update(pickInfo.pickedPoint, color);
 
-        targetDecalManager.buildDecal(env.groundMesh, pickInfo.pickedPoint, pickInfo.getNormal());
+        waypointManager.buildDecal(env.groundMesh, pickInfo.pickedPoint, pickInfo.getNormal());
 
         player.pointPlayerAt(pickInfo.pickedPoint);
 
@@ -203,7 +203,8 @@ function rightMouseButtonDown(pickInfo : PickingInfo) {
        || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
         
         if(player.hasBarrel()) {
-            player.throwBarrel(pickInfo.pickedPoint, scene);
+            let thrownBarrel = player.throwBarrel(pickInfo.pickedPoint, scene);
+            barrelManager.addThrownBarrel(thrownBarrel);
         }
     }
 }
@@ -230,23 +231,45 @@ scene.onPointerObservable.add((pointerInfo) => {
 });
 
 // TODO:  can we re-write the buildColorMap routine to return a promise? 
-// TODO:  remove MeshBuilder?
 // TODO:  trees look bad.  Tweak materials and lighting for better shading on trunk?
 
 // TODO:  detect collisions with trees
 // TODO:  camera following ball
 
 
-
 function checkForBarrelPickup(){
     if( !player.hasBarrel() ) {
         let collided = barrelManager.checkForCollision(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
-        if(collided) {
+        if(collided && collided.isPickUpable) {
             player.pickUpBarrel(collided);
+            barrelManager.releaseBarrel(collided);
         }
     }
 }
 
+function updateThrownBarrels() {
+    for(let i = 0; i < barrelManager.thrownBarrels.length; i++){
+        let thisBarrel = barrelManager.thrownBarrels[i];
+
+        if((thisBarrel.position.y < env.groundMesh.getHeightAtCoordinates(thisBarrel.position.x, thisBarrel.position.z) + Constants.MIN_D_BARREL_GROUND_EXPLODE)
+           || barrelManager.checkForCollision(thisBarrel.position, Constants.MIN_D2_BARREL_BARREL_EXPLODE)
+           || ratioManager.checkForCollision(thisBarrel.position, Constants.MIN_D2_BARREL_RATIO_EXPLODE)) {
+               // TODO:  explode
+               thisBarrel.explode(scene);
+               barrelManager.releaseThrownBarrel(thisBarrel);
+           }
+    }
+}
+
+function updateExplosions() {
+    // loop through explosions.
+    // if explosion.age > TTL, remove from explosions collection & dispose
+    // increase burst radius by X
+    // test for collisions with mesh, barrel
+    // for each collision, explode collided object
+    // if collided object is equivelent ratio ++ score
+    // TODO:  if non-equivalent ratio ...
+}
 
 function startRenderLoop() {
 
@@ -254,8 +277,10 @@ function startRenderLoop() {
 
         movePlayer();
         checkForBarrelPickup();
+        updateThrownBarrels();
 
-        let collided = ratioManager.checkForCollision(player.getPosition());
+        // todo:  replace with flying barrel check + explosion check
+        let collided = ratioManager.checkForCollision(player.getPosition(), Constants.MIN_D2_ANY_RATIO_COLLISION);
         if(collided) {
             collided.explode(scene);
         }

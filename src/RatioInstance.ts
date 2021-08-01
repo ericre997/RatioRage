@@ -61,18 +61,25 @@ export class RatioInstance {
         this.visitArray(this.denominator, (instance) => { instance.explode(scene); });
         this.bar.explode(scene);
 
+
         let pos = this.root.position.clone();
         this.particleSystemSet.systems.forEach( s=> {
-            s.disposeOnStop = true;
             s.emitter = pos;
             s.maxEmitPower = s.maxEmitPower * .1;
 
+            if(s.name === "fireball") {
+                s.animations[0].getKeys().forEach( k => {
+                    k.value += this.root.position.y;
+                })
+            }
         });
         this.particleSystemSet.start();
         this.explodeTime = Date.now();        
     }
 
     public dispose() : void {
+        this.particleSystemSet.dispose();
+        this.particleSystemSet = null;
         this.root.dispose();
         this.root = null;
         this.visitArray(this.numerator, (instance) => { instance.dispose(); });

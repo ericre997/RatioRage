@@ -14,6 +14,7 @@ export class BarrelInstance {
     private particleSystemSet : ParticleSystemSet;
 
     public isPickUpable = true;
+    public isThrown = false;
 
     constructor(explosionTTL: number, 
                 root: Mesh, 
@@ -70,19 +71,26 @@ export class BarrelInstance {
 
         this.explodableInstance.explode(scene);
 
-        let pos = this.root.position.clone();
         this.particleSystemSet.systems.forEach( s=> {
-            s.disposeOnStop = true;
-            s.emitter = pos;
+            s.emitter = this.root.position.clone();
             s.maxEmitPower = s.maxEmitPower * .1;
 
+            if(s.name === "fireball") {
+                s.animations[0].getKeys().forEach( k => {
+                    k.value += this.root.position.y;
+                })
+            }
         });
+
         this.particleSystemSet.start();
-    
+        //this.particleSystemSet.start();
+
         this.explodeTime = Date.now();        
     }
 
     public dispose() : void {
+        this.particleSystemSet.dispose();
+        this.particleSystemSet = null;
         this.root.dispose();
         this.root = null;
         this.explodableInstance.dispose();

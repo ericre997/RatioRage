@@ -48,16 +48,13 @@ export class Player {
     }
 
     public pickUpBarrel(barrelInstance: BarrelInstance) {
-        if(barrelInstance.isPickUpable 
-           && Vector3.DistanceSquared(barrelInstance.position, this.getPosition()) <= Constants.MIN_D2_PLAYER_BARREL_PICKUP) {
-            this.barrel = barrelInstance;
-            barrelInstance.parent = this.playerMesh;
-            barrelInstance.rotate(Axis.X, -45 * Constants.RADIANS_PER_DEGREE);
-            barrelInstance.position = new Vector3(this.playerSize/2, this.playerSize/2, 0);
-        }
+        this.barrel = barrelInstance;
+        barrelInstance.parent = this.playerMesh;
+        barrelInstance.rotate(Axis.X, -45 * Constants.RADIANS_PER_DEGREE);
+        barrelInstance.position = new Vector3(this.playerSize/2, this.playerSize/2, 0);
     }
 
-    public throwBarrel(targetPoint: Vector3, scene : Scene) {
+    public throwBarrel(targetPoint: Vector3, scene : Scene) : BarrelInstance{
 
         // get world position of barrel.  we will need to set after deparenting
         let scale = new Vector3();
@@ -78,6 +75,7 @@ export class Player {
         // set no-pickup flag so we don't grab
         // the barrel back as soon as we throw it!
         this.barrel.isPickUpable = false;
+        this.barrel.isThrown = true;
 
         // separate barrel and player
         let thisBarrel = this.barrel;
@@ -106,8 +104,8 @@ export class Player {
         let angularVelocity = new Vector3( ROT * (Math.random() - .5), ROT * (Math.random() - .5), ROT * (Math.random() - .5) )        
         barrelRoot.physicsImpostor.setAngularVelocity(angularVelocity);
 
-        // TODO:  set pre-render routine to detect collisions/trigger explosion/update score.
-
+        // return the barrel so we can track it
+        return thisBarrel;
     }
 
     public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {

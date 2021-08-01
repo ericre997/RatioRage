@@ -8,6 +8,8 @@ import { Utils } from "./Utils";
 
 export class BarrelManager {
     private barrelInstances = new Array<BarrelInstance>();
+    public thrownBarrels = new Array<BarrelInstance>();
+
     private barrelFactory : BarrelFactory;
 
     public initialize(env : Environment, ratioPositions : Vector3[], scene : Scene) : Promise<any> {
@@ -20,6 +22,7 @@ export class BarrelManager {
         return promise;
     }
 
+    // TODO:  remove... here for debugging only.
     public spinBarrels(deltaTime : number) : void {
         let amount = Constants.RATIO_SPIN_RADIANS_PER_MS * deltaTime;
         for(let i = 0; i < this.barrelInstances.length; i++) {
@@ -30,6 +33,31 @@ export class BarrelManager {
         }
     }
 
+    // TODO:  consolidate release code in cleanup pass
+    public releaseBarrel(barrel : BarrelInstance) {
+        for(let i = 0; i < this.barrelInstances.length; i++) {
+            if(this.barrelInstances[i] === barrel) {
+                this.barrelInstances.splice(i, 1);
+                break;
+            }
+        }
+    }
+
+    public releaseThrownBarrel(barrel : BarrelInstance) {
+        for(let i = 0; i < this.thrownBarrels.length; i++) {
+            if(this.thrownBarrels[i] === barrel) {
+                this.thrownBarrels.splice(i, 1);
+                break;
+            }
+        }
+    }
+
+
+    public addThrownBarrel(barrel : BarrelInstance) {
+        this.thrownBarrels.push(barrel);
+    }
+
+    
     public checkForCollision(playerPosition : Vector3, minD2 : number) : BarrelInstance {
         for(let i = 0; i < this.barrelInstances.length; i++) {
             if(Vector3.DistanceSquared(playerPosition, this.barrelInstances[i].position) <= minD2) {

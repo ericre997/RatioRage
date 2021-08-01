@@ -41,11 +41,10 @@ export class RatioManager {
         }
     }
     
-    public checkForCollision(position : Vector3): RatioInstance {
-        let collisionD2 = Constants.MIN_D2_ANY_RATIO_COLLISION;
+    public checkForCollision(position : Vector3, d2 : number): RatioInstance {
         for(let i = 0; i < this.ratioInstances.length; i++) {
             let ratioInstance = this.ratioInstances[i];
-            if(!ratioInstance.isExploded && Vector3.DistanceSquared(position, ratioInstance.position) <= collisionD2 ) {
+            if(!ratioInstance.isExploded && Vector3.DistanceSquared(position, ratioInstance.position) <= d2 ) {
                 return ratioInstance;
             }
         }
