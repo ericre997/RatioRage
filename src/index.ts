@@ -87,6 +87,15 @@ sphere.material = new NormalMaterial("normal", scene);
 sphere.physicsImpostor = new PhysicsImpostor(sphere, PhysicsImpostor.SphereImpostor, {mass: 2, friction:0.5, restitution:0}, scene);
 sphere.parent = null;
 
+
+//let b = new Mesh("dummy", scene);
+//let s = Mesh.CreateSphere("b", 16,  2, scene);
+//s.material = new NormalMaterial("normal", scene);
+//s.parent = b;
+//b.physicsImpostor = new PhysicsImpostor(b, PhysicsImpostor.ParticleImpostor, {mass: 2, friction:0.5, restitution:0}, scene);
+//b.parent = null;
+
+
 // set up HUD
 let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
 let diagnostics = new Diagnostics(advancedTexture);
@@ -192,8 +201,10 @@ function rightMouseButtonDown(pickInfo : PickingInfo) {
     if(pickInfo.pickedMesh === env.groundMesh 
        || pickInfo.pickedMesh.name.startsWith(Constants.BARREL_WHOLE_PREFIX)
        || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
-        alert("hello");
-        // throw barrel at picked point
+        
+        if(player.hasBarrel()) {
+            player.throwBarrel(pickInfo.pickedPoint, scene);
+        }
     }
 }
 
@@ -228,9 +239,7 @@ scene.onPointerObservable.add((pointerInfo) => {
 
 
 function checkForBarrelPickup(){
-    if( player.barrel ) {
-        return;
-    } else {
+    if( !player.hasBarrel() ) {
         let collided = barrelManager.checkForCollision(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
         if(collided) {
             player.pickUpBarrel(collided);

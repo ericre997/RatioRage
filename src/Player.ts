@@ -1,15 +1,12 @@
 import { Scene } from "@babylonjs/core/scene";
 import { Mesh, LinesMesh } from "@babylonjs/core/Meshes";
 import { NormalMaterial } from "@babylonjs/materials";
-import { Vector3, Axis, Space, Color3 } from "@babylonjs/core/Maths/math";
+import { Vector3, Axis, Space, Color3, Quaternion } from "@babylonjs/core/Maths/math";
 import { Environment } from "./Environment";
 import { Constants } from "./Constants";
 import { BarrelInstance } from "./BarrelInstance";
-import { AxesViewer } from "@babylonjs/core/debug";
+import { PhysicsImpostor } from "@babylonjs/core/Physics";
 
-// range = Math.power(v, 2) * Math.sin(2 * angle) / g
-// https://www.omnicalculator.com/physics/projectile-motion
-// https://en.wikipedia.org/wiki/Range_of_a_projectile
 
 export class Player {
 
@@ -17,7 +14,7 @@ export class Player {
     public readonly walkSpeed : number;
     public readonly minMoveDistance = .1;
 
-    public barrel : BarrelInstance;
+    private barrel : BarrelInstance;
 
     private playerMesh : Mesh;
     private forwardMesh : LinesMesh;
@@ -33,6 +30,9 @@ export class Player {
         return this.playerMesh.position;
     }
 
+    public hasBarrel() : boolean { 
+        return this.barrel ? true : false;
+    }
 
     public static create(scene : Scene, playerSize: number, walkSpeed: number) {
         let player = new Player(playerSize, walkSpeed);
@@ -47,8 +47,9 @@ export class Player {
         return player;
     }
 
-    public pickUpBarrel(barrelInstance : BarrelInstance) {
-        if(Vector3.DistanceSquared(barrelInstance.position, this.getPosition()) <= Constants.MIN_D2_PLAYER_BARREL_PICKUP) {
+    public pickUpBarrel(barrelInstance: BarrelInstance) {
+        if(barrelInstance.isPickUpable 
+           && Vector3.DistanceSquared(barrelInstance.position, this.getPosition()) <= Constants.MIN_D2_PLAYER_BARREL_PICKUP) {
             this.barrel = barrelInstance;
             barrelInstance.parent = this.playerMesh;
             barrelInstance.rotate(Axis.X, -45 * Constants.RADIANS_PER_DEGREE);
@@ -56,6 +57,53 @@ export class Player {
         }
     }
 
+    public throwBarrel(targetPoint: Vector3, scene : Scene) {
+        // de-parent barrel from player
+        let barrel = this.barrel;
+      //  this.barrel = null;
+
+        // calculate initial velocity and direction needed to hit target 
+        // get world position of barrel
+        let scale = new Vector3();
+        let rotation = new Quaternion();
+        let position = new Vector3();
+        barrel.root.getWorldMatrix().decompose(scale, rotation, position);
+
+        let dist = targetPoint.subtract(position);
+        let acc = -9.8;
+        let du = Math.sqrt(dist.x * dist.x + dist.z * dist.z);
+        let dv = dist.y;
+        let angle = 45 * Constants.RADIANS_PER_DEGREE;
+        let cos = Math.cos(angle);
+        let sin = Math.sin(angle);
+
+        let v = Math.sqrt( (1/(dv - (sin * du / cos))) * (acc*du*du) / (2*cos*cos) );
+
+        // separate barrel and player
+        barrel.isPickUpable = false;
+        let b = barrel.root;
+        b.parent = null;
+
+        this.barrel = null;
+
+        b.position = position;
+        b.rotationQuaternion = rotation;
+        b.scaling = scale;
+        b.physicsImpostor = new PhysicsImpostor(b, PhysicsImpostor.ParticleImpostor, {mass: 2, friction:0, restitution:0}, scene);
+        
+        // TODO:  set the direction correctly!
+        // give set initial velocity for barrel
+        let linearVelocity = new Vector3(v * cos, v * sin, 0);
+        b.physicsImpostor.setLinearVelocity(linearVelocity);
+
+        // give random spin
+        const ROT = 4;
+        let angularVelocity = new Vector3( ROT * (Math.random() - .5), ROT * (Math.random() - .5), ROT * (Math.random() - .5) )        
+        b.physicsImpostor.setAngularVelocity(angularVelocity);
+
+        // TODO:  set pre-render routine to detect collisions/trigger explosion/update score.
+
+    }
 
     public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {
         let targetPosition = surfaceTargetPosition.clone();
@@ -92,7 +140,7 @@ export class Player {
 
         //this.updateAxisLines();
     }
-    //https://math.stackexchange.com/questions/555198/find-direction-of-angle-between-2-vectors
+
     //https://math.stackexchange.com/questions/2510897/calculate-the-angle-between-two-vectors-when-direction-is-important
     public pointPlayerAt(targetPosition: Vector3) {
         let flatTargetPos = targetPosition.clone();

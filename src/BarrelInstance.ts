@@ -9,9 +9,11 @@ export class BarrelInstance {
     private explosionTTL : number;
     private explodeTime: number;
 
-    private root : Mesh;
+    public root : Mesh;
     private explodableInstance : ExplodableMeshInstance;
     private particleSystemSet : ParticleSystemSet;
+
+    public isPickUpable = true;
 
     constructor(explosionTTL: number, 
                 root: Mesh, 
