@@ -15,6 +15,7 @@ export class RatioManager {
     
     private ratioFactory : RatioFactory; 
     public ratioInstances = new Array<RatioInstance>();
+    public explodedRatioInstances = new Array<RatioInstance>();
 
     public get targetRatio() : Ratio {
         return this.equivalentRatios[this.equivalentRatios.length - 1];
@@ -30,7 +31,7 @@ export class RatioManager {
 
         return promise;
     }
-
+/*
     public spinRatios(deltaTime : number) : void {
         let amount = Constants.RATIO_SPIN_RADIANS_PER_MS * deltaTime;
         for(let i = 0; i < this.ratioInstances.length; i++) {
@@ -40,23 +41,44 @@ export class RatioManager {
             }
         }
     }
-    
-    public checkForCollision(position : Vector3, d2 : number): RatioInstance {
+*/
+    public checkForCollisions(position : Vector3, d2 : number): RatioInstance[] {
+        let ret = new Array<RatioInstance>();
         for(let i = 0; i < this.ratioInstances.length; i++) {
             let ratioInstance = this.ratioInstances[i];
             if(!ratioInstance.isExploded && Vector3.DistanceSquared(position, ratioInstance.position) <= d2 ) {
-                return ratioInstance;
+                ret.push(ratioInstance);
             }
         }
 
-        return null;
+        return ret;
     }
-    
+/*
     public updateRatioFragments() {
-        for(let i = 0; i < this.ratioInstances.length; i++) {
+        for(let i = this.ratioInstances.length - 1; i >= 0; i--) {
             if(this.ratioInstances[i].shouldDispose()) {
                 this.ratioInstances[i].dispose();
                 this.ratioInstances.splice(i, 1);
+            }
+        }
+    }
+*/
+    public updateRatios(deltaTime : number) : void {
+        for(let i = this.ratioInstances.length - 1; i >= 0; i--) {
+            let thisInstance = this.ratioInstances[i];
+            if(thisInstance.isExploded) {
+                this.ratioInstances.splice(i, 1);
+                this.explodedRatioInstances.push(thisInstance);
+            } else {
+                thisInstance.rotate(Constants.RATIO_SPIN_RADIANS_PER_MS * deltaTime);
+            }
+        }
+
+        for(let i = this.explodedRatioInstances.length - 1; i >= 0; i--) {
+            let thisInstance = this.explodedRatioInstances[i];
+            if(thisInstance.shouldDispose()) {
+                thisInstance.dispose();
+                this.explodedRatioInstances.splice(i, 1);
             }
         }
     }
@@ -79,7 +101,7 @@ export class RatioManager {
         let candidatePositions = Utils.shuffle(this.getCandidatePositionsForRatioPlacement(env));
 
         this.equivalentRatios.forEach( (thisRatio) => {
-            let thisPromise = this.ratioFactory.createRatioInstanceAsync(scene, thisRatio).then( (inst) => {
+            let thisPromise = this.ratioFactory.createRatioInstanceAsync(scene, thisRatio, true).then( (inst) => {
                 this.placeRatio(inst, candidatePositions, env);
                 this.ratioInstances.push(inst);
             });      
@@ -87,7 +109,7 @@ export class RatioManager {
         });
 
         this.nonEquivalentRatios.forEach( (thisRatio) => {
-            let thisPromise = this.ratioFactory.createRatioInstanceAsync(scene, thisRatio).then( (inst) => {
+            let thisPromise = this.ratioFactory.createRatioInstanceAsync(scene, thisRatio, false).then( (inst) => {
                 this.placeRatio(inst, candidatePositions, env);
                 this.ratioInstances.push(inst);
             });            

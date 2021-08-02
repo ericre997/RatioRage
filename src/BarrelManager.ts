@@ -22,17 +22,6 @@ export class BarrelManager {
         return promise;
     }
 
-    // TODO:  remove... here for debugging only.
-    public spinBarrels(deltaTime : number) : void {
-        let amount = Constants.RATIO_SPIN_RADIANS_PER_MS * deltaTime;
-        for(let i = 0; i < this.barrelInstances.length; i++) {
-            let barrelInstance = this.barrelInstances[i];
-            if(!barrelInstance.isExploded) {
-                barrelInstance.rotate(Axis.X, amount);
-            }
-        }
-    }
-
     // TODO:  consolidate release code in cleanup pass
     public releaseBarrel(barrel : BarrelInstance) {
         for(let i = 0; i < this.barrelInstances.length; i++) {
@@ -57,7 +46,7 @@ export class BarrelManager {
         this.thrownBarrels.push(barrel);
     }
 
-    
+/*    
     public checkForCollision(playerPosition : Vector3, minD2 : number) : BarrelInstance {
         for(let i = 0; i < this.barrelInstances.length; i++) {
             if(Vector3.DistanceSquared(playerPosition, this.barrelInstances[i].position) <= minD2) {
@@ -66,7 +55,17 @@ export class BarrelManager {
         }
         return null;
     }
-
+*/
+    public checkForCollisions(position : Vector3, d2 : number) : BarrelInstance[] {
+        let ret = new Array<BarrelInstance>();
+        for(let i = 0; i < this.barrelInstances.length; i++) {
+            if(!this.barrelInstances[i].isExploded && Vector3.DistanceSquared(position, this.barrelInstances[i].position) <= d2) {
+                ret.push(this.barrelInstances[i]);
+            }
+        }
+        return ret;
+    }
+    
     private createBarrelInstancesAsync(env : Environment, ratioPositions : Vector3[], scene : Scene) : Promise<any> {
         let promises = new Array<Promise<any>>();
     

@@ -35,18 +35,12 @@ import { PhysicsHelper, PhysicsImpostor } from "@babylonjs/core/Physics";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import * as cannon from "cannon";
 import { CannonJSPlugin } from "@babylonjs/core/Physics"
-import { RatioManager } from "./RatioManager";
-import { RatioFactory } from "./RatioFactory";
-import { RatioInstance } from "./RatioInstance";
-
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
-import { BarrelFactory } from "./BarrelFactory";
-import { BarrelInstance } from "./BarrelInstance";
-import { Utils } from "./Utils";
+import { RatioManager } from "./RatioManager";
 import { BarrelManager } from "./BarrelManager";
 import { Constants } from "./Constants"
-import { AxesViewer } from "@babylonjs/core/debug";
-
+import { Shockwave } from "./Shockwave";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 
 /// begin code!
 
@@ -55,9 +49,6 @@ const engine = new Engine(canvas);
 engine.setHardwareScalingLevel(1/window.devicePixelRatio);
 
 let scene = new Scene(engine);
-//scene.fogMode = Scene.FOGMODE_EXP2;
-//scene.fogDensity = .01;
-//scene.debugLayer.show();
 
 let physicsPlugin = new CannonJSPlugin(true, 10, cannon);
 let physicsHelper = new PhysicsHelper(scene);
@@ -72,8 +63,6 @@ light.intensity = 1;
 
 let cameras = [camera];
 let pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, cameras);
-//pipeline.depthOfFieldEnabled = true;
-//pipeline.depthOfFieldBlurLevel = DepthOfFieldEffectBlurLevel.Low;
 
 pipeline.bloomEnabled = true;
 pipeline.bloomThreshold = 0.8;
@@ -86,14 +75,6 @@ let sphere = Mesh.CreateSphere("sphere1", 16,  2, scene);
 sphere.material = new NormalMaterial("normal", scene);
 sphere.physicsImpostor = new PhysicsImpostor(sphere, PhysicsImpostor.SphereImpostor, {mass: 2, friction:0.5, restitution:0}, scene);
 sphere.parent = null;
-
-
-//let b = new Mesh("dummy", scene);
-//let s = Mesh.CreateSphere("b", 16,  2, scene);
-//s.material = new NormalMaterial("normal", scene);
-//s.parent = b;
-//b.physicsImpostor = new PhysicsImpostor(b, PhysicsImpostor.ParticleImpostor, {mass: 2, friction:0.5, restitution:0}, scene);
-//b.parent = null;
 
 
 // set up HUD
@@ -109,8 +90,47 @@ let ratioManager  = new RatioManager();
 let env = new Environment();
 let player : Player;
 
+// decals
+let waypointManager = new WaypointManager(scene);
+
+
 let elapsedTime = new ElapsedTime();
 let score = 0;
+
+// shockwaves
+let shockwaves = new Array<Shockwave>();
+
+//let shockwaveMat = new StandardMaterial("swmat", scene);
+//shockwaveMat.diffuseColor = new Color3(1,1,1);
+function createShockwave(position : Vector3) {
+    let pos = position.clone();
+    pos.y += 1;
+    let newShockwave = new Shockwave(pos, 10, 700, Date.now());
+    // newShockwave.createDebugMesh(shockwaveMat, scene);
+    shockwaves.push(newShockwave);
+}
+
+function updateShockwaves() {
+    let now = Date.now();
+    for(let i = shockwaves.length-1; i >= 0; i--) {
+        let radius = shockwaves[i].getCurrentSize(now);
+        if(radius < 0) {
+            shockwaves.splice(i, 1);
+        } else {
+            let d2 = radius * radius;
+            let ratios = ratioManager.checkForCollisions(shockwaves[i].position, d2);
+            for(let i = 0; i < ratios.length; i++) {
+                ratios[i].explode(scene);
+                createShockwave(ratios[i].position);
+            }
+            let barrels = barrelManager.checkForCollisions(shockwaves[i].position, d2)
+            for(let i = 0; i < barrels.length; i++) {
+                barrels[i].explode(scene);
+                createShockwave(barrels[i].position);
+            }
+        }            
+    }
+}
 
 
 function getFlattenedRatioPositions() : Vector3[] {
@@ -122,7 +142,6 @@ function getFlattenedRatioPositions() : Vector3[] {
     }
     return positions;
 }
-
 
 env.setup(scene, () => { 
     player = createPlayer(scene, env); 
@@ -159,8 +178,6 @@ function createPlayer(scene: Scene, env: Environment) {
 
 
 
-// decals
-let waypointManager = new WaypointManager(scene);
 
 function movePlayer() {
     // TODO:  easing
@@ -233,16 +250,12 @@ scene.onPointerObservable.add((pointerInfo) => {
 // TODO:  can we re-write the buildColorMap routine to return a promise? 
 // TODO:  trees look bad.  Tweak materials and lighting for better shading on trunk?
 
-// TODO:  detect collisions with trees
-// TODO:  camera following ball
-
-
 function checkForBarrelPickup(){
     if( !player.hasBarrel() ) {
-        let collided = barrelManager.checkForCollision(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
-        if(collided && collided.isPickUpable) {
-            player.pickUpBarrel(collided);
-            barrelManager.releaseBarrel(collided);
+        let collided = barrelManager.checkForCollisions(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
+        if(collided && collided.length > 0 && collided[0].isPickUpable) {
+            player.pickUpBarrel(collided[0]);
+            barrelManager.releaseBarrel(collided[0]);
         }
     }
 }
@@ -252,24 +265,18 @@ function updateThrownBarrels() {
         let thisBarrel = barrelManager.thrownBarrels[i];
 
         if((thisBarrel.position.y < env.groundMesh.getHeightAtCoordinates(thisBarrel.position.x, thisBarrel.position.z) + Constants.MIN_D_BARREL_GROUND_EXPLODE)
-           || barrelManager.checkForCollision(thisBarrel.position, Constants.MIN_D2_BARREL_BARREL_EXPLODE)
-           || ratioManager.checkForCollision(thisBarrel.position, Constants.MIN_D2_BARREL_RATIO_EXPLODE)) {
-               // TODO:  explode
+           || barrelManager.checkForCollisions(thisBarrel.position, Constants.MIN_D2_BARREL_BARREL_EXPLODE).length > 0
+           || ratioManager.checkForCollisions(thisBarrel.position, Constants.MIN_D2_BARREL_RATIO_EXPLODE).length > 0) {
+
                thisBarrel.explode(scene);
+               createShockwave(thisBarrel.position);
+
+               // TODO:  review dispose code... make sure we are cleaning these things up.
                barrelManager.releaseThrownBarrel(thisBarrel);
            }
     }
 }
 
-function updateExplosions() {
-    // loop through explosions.
-    // if explosion.age > TTL, remove from explosions collection & dispose
-    // increase burst radius by X
-    // test for collisions with mesh, barrel
-    // for each collision, explode collided object
-    // if collided object is equivelent ratio ++ score
-    // TODO:  if non-equivalent ratio ...
-}
 
 function startRenderLoop() {
 
@@ -278,17 +285,15 @@ function startRenderLoop() {
         movePlayer();
         checkForBarrelPickup();
         updateThrownBarrels();
+        updateShockwaves();
 
-        // todo:  replace with flying barrel check + explosion check
-        let collided = ratioManager.checkForCollision(player.getPosition(), Constants.MIN_D2_ANY_RATIO_COLLISION);
-        if(collided) {
-            collided.explode(scene);
+        let collided = ratioManager.checkForCollisions(player.getPosition(), Constants.MIN_D2_ANY_RATIO_COLLISION);
+        if(collided && collided.length > 0) {
+            collided[0].explode(scene);
+            createShockwave(collided[0].position);
         }
-
-        ratioManager.spinRatios(engine.getDeltaTime());
-        ratioManager.updateRatioFragments();
-
-       // barrelManager.spinBarrels(engine.getDeltaTime());
+        
+        ratioManager.updateRatios(engine.getDeltaTime());
 
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);

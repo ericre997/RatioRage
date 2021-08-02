@@ -8,19 +8,22 @@ import { ExplodableMeshInstance } from "./ExplodableMeshInstance";
 export class RatioInstance {
     private explosionTTL : number;
     private explodeTime: number;
-
+    
     private root : Mesh;
     private numerator : Array<ExplodableMeshInstance>;
     private denominator : Array<ExplodableMeshInstance>;
     private bar : ExplodableMeshInstance;
     private particleSystemSet : ParticleSystemSet;
 
+    public readonly isEquivalent;
+
     constructor(explosionTTL: number, 
                 root: Mesh, 
                 numerator: Array<ExplodableMeshInstance>, 
                 denominator: Array<ExplodableMeshInstance>, 
                 bar: ExplodableMeshInstance,
-                particleSystemSet : ParticleSystemSet) {
+                particleSystemSet : ParticleSystemSet, 
+                isEquivalent : boolean) {
         
         this.explosionTTL = explosionTTL;
         this.explodeTime = null;
@@ -29,6 +32,7 @@ export class RatioInstance {
         this.denominator = denominator;
         this.bar = bar;
         this.particleSystemSet = particleSystemSet;
+        this.isEquivalent = isEquivalent;
     }
 
     public get position() : Vector3 {
@@ -44,6 +48,7 @@ export class RatioInstance {
     public rotate(radians : number) {
         this.root.rotate(Axis.Y, radians)
     }
+    
     public get isExploded() : boolean { 
         return this.explodeTime !== null;
     }
@@ -57,8 +62,8 @@ export class RatioInstance {
             throw "Object is already exploded";
         }
 
-        this.visitArray(this.numerator, (instance) => { instance.explode(scene); });
-        this.visitArray(this.denominator, (instance) => { instance.explode(scene); });
+        this.numerator.forEach((instance) => { instance.explode(scene); });
+        this.denominator.forEach((instance) => { instance.explode(scene); });
         this.bar.explode(scene);
 
 
@@ -82,17 +87,11 @@ export class RatioInstance {
         this.particleSystemSet = null;
         this.root.dispose();
         this.root = null;
-        this.visitArray(this.numerator, (instance) => { instance.dispose(); });
+        this.numerator.forEach((instance) => { instance.dispose(); });
         this.numerator = null;
-        this.visitArray(this.denominator, (instance) => { instance.dispose(); });
+        this.denominator.forEach((instance) => { instance.dispose(); });
         this.denominator = null;
         this.bar.dispose();
         this.bar = null;
-    }
-
-    public visitArray(instances: Array<ExplodableMeshInstance>, callback: (instance : ExplodableMeshInstance) => any) : void {
-        for(let i = 0; i < instances.length; i++) {
-            callback(instances[i]);
-        }
     }
 }

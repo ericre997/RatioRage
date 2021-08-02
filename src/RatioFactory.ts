@@ -72,7 +72,7 @@ export class RatioFactory {
     }
 
 
-    public createRatioInstanceAsync(scene : Scene, ratio : Ratio) : Promise<RatioInstance> {
+    public createRatioInstanceAsync(scene : Scene, ratio : Ratio, isEquivalent : boolean) : Promise<RatioInstance> {
 
         let ratioInstanceId = this.numCreated++;
         let root = new Mesh(Constants.RATIO_ROOT_PREFIX + ratioInstanceId, scene);
@@ -104,7 +104,7 @@ export class RatioFactory {
 
         ParticleHelper.BaseAssetsUrl = "particles";
         return ParticleHelper.CreateAsync("explosion", scene).then((set)=> {
-            return new RatioInstance(this.explosionTTL, root, numerator, denominator, bar, set);
+            return new RatioInstance(this.explosionTTL, root, numerator, denominator, bar, set, isEquivalent);
         });
 
     }
