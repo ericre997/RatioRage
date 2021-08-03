@@ -26,7 +26,7 @@ import { Environment } from "./Environment";
 import { ImpactDecalManager } from "./ImpactDecalManager";
 import { WaypointManager } from "./WaypointManager";
 import { Player } from "./Player";
-import { Ratio } from "./Ratio";
+import { RatioInstance } from "./RatioInstance";
 import { GameOverlay } from "./GameOverlay";
 import { ElapsedTime } from "./ElapsedTime";
 
@@ -71,10 +71,10 @@ pipeline.bloomKernel = 64;
 pipeline.bloomScale = 0.5;
 
 // TODO REMOVE temp nonsense.
-let sphere = Mesh.CreateSphere("sphere1", 16,  2, scene);
-sphere.material = new NormalMaterial("normal", scene);
-sphere.physicsImpostor = new PhysicsImpostor(sphere, PhysicsImpostor.SphereImpostor, {mass: 2, friction:0.5, restitution:0}, scene);
-sphere.parent = null;
+//let sphere = Mesh.CreateSphere("sphere1", 16,  2, scene);
+//sphere.material = new NormalMaterial("normal", scene);
+//sphere.physicsImpostor = new PhysicsImpostor(sphere, PhysicsImpostor.SphereImpostor, {mass: 2, friction:0.5, restitution:0}, scene);
+//sphere.parent = null;
 
 
 // set up HUD
@@ -120,13 +120,11 @@ function updateShockwaves() {
             let d2 = radius * radius;
             let ratios = ratioManager.checkForCollisions(shockwaves[i].position, d2);
             for(let i = 0; i < ratios.length; i++) {
-                ratios[i].explode(scene);
-                createShockwave(ratios[i].position);
+                explodeRatioInstance(ratios[i]);
             }
             let barrels = barrelManager.checkForCollisions(shockwaves[i].position, d2)
             for(let i = 0; i < barrels.length; i++) {
-                barrels[i].explode(scene);
-                createShockwave(barrels[i].position);
+                explodeBarrelInstance(barrels[i]);
             }
         }            
     }
@@ -177,8 +175,6 @@ function createPlayer(scene: Scene, env: Environment) {
  }
 
 
-
-
 function movePlayer() {
     // TODO:  easing
     // TODO:  allow for multiple waypoints (i.e. remove current waypoint if hit?)
@@ -196,21 +192,25 @@ function pointerUp() {}
 function pointerMove() {}
 function leftMouseButtonDown(pickInfo : PickingInfo) {
 
-    if(pickInfo.pickedMesh === env.groundMesh) {
+    let position : Vector3;
 
-        sphere.position.x = pickInfo.pickedPoint.x;
-        sphere.position.y = pickInfo.pickedPoint.y + 10;
-        sphere.position.z = pickInfo.pickedPoint.z;
-        sphere.physicsImpostor.setLinearVelocity(new Vector3(0,0,0));
-        
+    if(pickInfo.pickedMesh.name.startsWith(Constants.BARREL_WHOLE_PREFIX)
+      || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
+        position = pickInfo.pickedPoint.clone();
+        position.y = env.groundMesh.getHeightAtCoordinates(position.x, position.z);
+    } else if(pickInfo.pickedMesh === env.groundMesh) {
+        position = pickInfo.pickedPoint.clone();
+    }
+
+    if(position) {
+        let normal = env.groundMesh.getNormalAtCoordinates(position.x, position.z);
         let color = env.colorMap.getColorAtPosition(pickInfo.pickedPoint);
-        diagnostics.update(pickInfo.pickedPoint, color);
 
-        waypointManager.buildDecal(env.groundMesh, pickInfo.pickedPoint, pickInfo.getNormal());
+        diagnostics.update(position, color);
 
-        player.pointPlayerAt(pickInfo.pickedPoint);
+        waypointManager.buildDecal(env.groundMesh, position, normal);
 
-        score += 1;
+        player.pointPlayerAt(position);
     }
 }
 
@@ -268,15 +268,25 @@ function updateThrownBarrels() {
            || barrelManager.checkForCollisions(thisBarrel.position, Constants.MIN_D2_BARREL_BARREL_EXPLODE).length > 0
            || ratioManager.checkForCollisions(thisBarrel.position, Constants.MIN_D2_BARREL_RATIO_EXPLODE).length > 0) {
 
-               thisBarrel.explode(scene);
-               createShockwave(thisBarrel.position);
-
-               // TODO:  review dispose code... make sure we are cleaning these things up.
                barrelManager.releaseThrownBarrel(thisBarrel);
+               explodeBarrelInstance(thisBarrel);
            }
     }
 }
 
+function explodeRatioInstance(ratioInstance : RatioInstance) {
+    ratioInstance.explode(scene);
+    createShockwave(ratioInstance.position);
+    if(ratioInstance.isEquivalent) {
+        score++;
+    }
+}
+
+function explodeBarrelInstance(barrelInstance) {
+    barrelInstance.explode(scene);
+    createShockwave(barrelInstance.position);
+    barrelManager.queueBarrelForDisposal(barrelInstance);
+}
 
 function startRenderLoop() {
 
@@ -289,11 +299,11 @@ function startRenderLoop() {
 
         let collided = ratioManager.checkForCollisions(player.getPosition(), Constants.MIN_D2_ANY_RATIO_COLLISION);
         if(collided && collided.length > 0) {
-            collided[0].explode(scene);
-            createShockwave(collided[0].position);
+            explodeRatioInstance(collided[0]);
         }
         
         ratioManager.updateRatios(engine.getDeltaTime());
+        barrelManager.disposeBarrels();
 
         gameOverlay.updateElapsedTime(elapsedTime);
         gameOverlay.updateScore(score);

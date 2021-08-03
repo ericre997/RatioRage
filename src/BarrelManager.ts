@@ -6,10 +6,17 @@ import { BarrelInstance } from "./BarrelInstance";
 import { Constants } from "./Constants";
 import { Utils } from "./Utils";
 
+
+// barrel lifecycle:
+// create and stash in BarrelManager.barrelInstance
+// on pick up, remove from barrelInstances and add to player
+// on throw, remove from player and add to thrownBarrels
+// on explode
 export class BarrelManager {
     private barrelInstances = new Array<BarrelInstance>();
     public thrownBarrels = new Array<BarrelInstance>();
-
+    public explodedBarrels = new Array<BarrelInstance>();
+    
     private barrelFactory : BarrelFactory;
 
     public initialize(env : Environment, ratioPositions : Vector3[], scene : Scene) : Promise<any> {
@@ -41,21 +48,24 @@ export class BarrelManager {
         }
     }
 
+    public queueBarrelForDisposal(barrel : BarrelInstance) {
+        this.explodedBarrels.push(barrel);
+    }
+
+    public disposeBarrels() {
+        for(let i = this.explodedBarrels.length - 1; i >= 0; i--) {
+            let thisInstance = this.explodedBarrels[i];
+            if(thisInstance.shouldDispose()) {
+                thisInstance.dispose();
+                this.explodedBarrels.splice(i, 1);
+            }
+        }
+    }
 
     public addThrownBarrel(barrel : BarrelInstance) {
         this.thrownBarrels.push(barrel);
     }
 
-/*    
-    public checkForCollision(playerPosition : Vector3, minD2 : number) : BarrelInstance {
-        for(let i = 0; i < this.barrelInstances.length; i++) {
-            if(Vector3.DistanceSquared(playerPosition, this.barrelInstances[i].position) <= minD2) {
-                return this.barrelInstances[i];
-            }
-        }
-        return null;
-    }
-*/
     public checkForCollisions(position : Vector3, d2 : number) : BarrelInstance[] {
         let ret = new Array<BarrelInstance>();
         for(let i = 0; i < this.barrelInstances.length; i++) {
