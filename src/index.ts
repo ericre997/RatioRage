@@ -4,12 +4,11 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/inspector";
-import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
+import { Vector3 } from "@babylonjs/core/Maths/math";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras";
 
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { Mesh } from "@babylonjs/core/Meshes";
-import { NormalMaterial } from "@babylonjs/materials";
+
 import "@babylonjs/core/Meshes/meshBuilder";
 import "@babylonjs/loaders";
 import "@babylonjs/core/Loading/Plugins/babylonFileLoader";
@@ -19,7 +18,7 @@ import { PickingInfo } from "@babylonjs/core/Collisions/pickingInfo";
 import "@babylonjs/core/Culling/ray";
 // GUI
 import { AdvancedDynamicTexture, TextBlock } from "@babylonjs/gui";
-import { setAndStartTimer, Tools } from "@babylonjs/core/Misc";
+import { Tools } from "@babylonjs/core/Misc";
 
 import { Diagnostics } from "./Diagnostics";
 import { Environment } from "./Environment";
@@ -41,6 +40,9 @@ import { BarrelManager } from "./BarrelManager";
 import { Constants } from "./Constants"
 import { Shockwave } from "./Shockwave";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
+import { ApeManager } from "./ApeManager";
+import { KeyboardEventTypes } from "@babylonjs/core";
 
 /// begin code!
 
@@ -141,7 +143,12 @@ function getFlattenedRatioPositions() : Vector3[] {
     return positions;
 }
 
+let apeManager = new ApeManager();
+
 env.setup(scene, () => { 
+
+    apeManager.load(scene);
+
     player = createPlayer(scene, env); 
     
     elapsedTime.start();
@@ -159,6 +166,7 @@ env.setup(scene, () => {
             startRenderLoop();
         });
 });
+
 
 function createPlayer(scene: Scene, env: Environment) {
     let playerSize = 1;
@@ -246,6 +254,18 @@ scene.onPointerObservable.add((pointerInfo) => {
         break;
     }
 });
+
+
+scene.onKeyboardObservable.add( (kbInfo) => {
+    switch(kbInfo.type) {
+        case KeyboardEventTypes.KEYDOWN:
+            let animationIdx : number = kbInfo.event.key.charCodeAt(0) - "0".charCodeAt(0);
+            apeManager.playAnimation(animationIdx);
+            break;
+
+    }
+    });
+
 
 // TODO:  can we re-write the buildColorMap routine to return a promise? 
 // TODO:  trees look bad.  Tweak materials and lighting for better shading on trunk?
