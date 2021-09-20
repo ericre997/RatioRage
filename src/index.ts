@@ -41,7 +41,7 @@ import { Constants } from "./Constants"
 import { Shockwave } from "./Shockwave";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
-import { ApeManager } from "./ApeManager";
+import { ApeAnimations, ApeManager } from "./ApeManager";
 import { KeyboardEventTypes } from "@babylonjs/core";
 
 /// begin code!
@@ -260,7 +260,9 @@ scene.onKeyboardObservable.add( (kbInfo) => {
     switch(kbInfo.type) {
         case KeyboardEventTypes.KEYDOWN:
             let animationIdx : number = kbInfo.event.key.charCodeAt(0) - "0".charCodeAt(0);
-            apeManager.playAnimation(animationIdx);
+            if(animationIdx >= 0 && animationIdx < ApeAnimations.NUM_ANIMATIONS){
+                apeManager.playAnimation(animationIdx);
+            }                
             break;
 
     }
