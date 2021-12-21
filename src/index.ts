@@ -6,6 +6,7 @@ import { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/inspector";
 import { Vector3 } from "@babylonjs/core/Maths/math";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras";
+import { Animation } from "@babylonjs/core";
 
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 
@@ -13,6 +14,7 @@ import "@babylonjs/core/Meshes/meshBuilder";
 import "@babylonjs/loaders";
 import "@babylonjs/core/Loading/Plugins/babylonFileLoader";
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
+
 // for picking 
 import { PickingInfo } from "@babylonjs/core/Collisions/pickingInfo";
 import "@babylonjs/core/Culling/ray";
@@ -50,6 +52,8 @@ const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const engine = new Engine(canvas);
 engine.setHardwareScalingLevel(1/window.devicePixelRatio);
 
+Animation.AllowMatricesInterpolation = true;
+
 let scene = new Scene(engine);
 
 let physicsPlugin = new CannonJSPlugin(true, 10, cannon);
@@ -62,6 +66,19 @@ camera.attachControl(canvas, false);
 
 let light = new HemisphericLight("light1", new Vector3(0,1,0),scene);
 light.intensity = 1;
+
+// TODO:  add in shadows:
+/*
+    var light2 = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(0, -0.5, -1.0), scene);
+    light2.position = new BABYLON.Vector3(0, 5, 5);
+
+    // Shadows
+    var shadowGenerator = new BABYLON.ShadowGenerator(1024, light2);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+3
+*/
+
 
 let cameras = [camera];
 let pipeline = new DefaultRenderingPipeline("defaultPipeline", true, scene, cameras);
