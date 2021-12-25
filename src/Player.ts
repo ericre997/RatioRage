@@ -30,6 +30,14 @@ export class Player {
         return this.playerMesh.position;
     }
 
+    public getRotationQuaternion() : Quaternion {
+        return this.playerMesh.rotationQuaternion;
+    }
+
+    public getRotation() : Vector3 {
+        return this.playerMesh.rotation;
+    }
+
     public hasBarrel() : boolean { 
         return this.barrel ? true : false;
     }
@@ -108,13 +116,13 @@ export class Player {
         return thisBarrel;
     }
 
-    public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {
+    public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) : boolean{
         let targetPosition = surfaceTargetPosition.clone();
         targetPosition.y += this.playerSize / 2;
 
         let distanceFromTarget = Vector3.Distance(this.playerMesh.position, targetPosition);
         if(distanceFromTarget < this.minMoveDistance) {
-            return;
+            return false;
         }
 
         let maxMoveDistance = this.walkSpeed * deltaTime;  
@@ -127,7 +135,7 @@ export class Player {
         
         let heightAtProposed = env.groundMesh.getHeightAtCoordinates(proposedPosition.x, proposedPosition.z);
         if(heightAtProposed < minDestHeight) {
-            return;
+            return false;
         }
         proposedPosition.y = heightAtProposed + this.playerSize /2;;
 
@@ -142,6 +150,7 @@ export class Player {
         this.placePlayerAt(env, finalPosition);
 
         //this.updateAxisLines();
+        return true;
     }
 
     //https://math.stackexchange.com/questions/2510897/calculate-the-angle-between-two-vectors-when-direction-is-important

@@ -76,7 +76,6 @@ light.intensity = 1;
     var shadowGenerator = new BABYLON.ShadowGenerator(1024, light2);
     shadowGenerator.useBlurExponentialShadowMap = true;
     shadowGenerator.blurKernel = 32;
-3
 */
 
 
@@ -167,7 +166,7 @@ env.setup(scene, () => {
     apeManager.load(scene);
 
     player = createPlayer(scene, env); 
-    
+
     elapsedTime.start();
 
     ratioManager.initialize(env, scene)
@@ -187,7 +186,7 @@ env.setup(scene, () => {
 
 function createPlayer(scene: Scene, env: Environment) {
     let playerSize = 1;
-    let walkSpeed = 20 / 1000;  // units per millisecond
+    let walkSpeed = 5/1000; //20 / 1000;  // units per millisecond
 
     let posX = 31;
     let posZ = -1.5;
@@ -196,6 +195,7 @@ function createPlayer(scene: Scene, env: Environment) {
 
     player = Player.create(scene, playerSize, walkSpeed);
     player.placePlayerAt(env, startPosition);
+
     return player;
  }
 
@@ -207,7 +207,19 @@ function movePlayer() {
     // TODO:  go around obstacles.
     let waypoint = waypointManager.getNextWaypoint();
     if(waypoint) {
-        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), Constants.MIN_D2_PLAYER_ELEVATION);
+        if(player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), Constants.MIN_D2_PLAYER_ELEVATION)){
+            apeManager.playAnimation(ApeAnimations.RUNNING);
+        } else {
+            apeManager.playAnimation(ApeAnimations.IDLE);
+        }
+    }       
+
+    // TODO:  do a better job binding the ape to the player
+    apeManager.position = player.getPosition(); 
+    if(player.getRotationQuaternion()) {
+        apeManager.rotationQuaternion = player.getRotationQuaternion();
+    } else {
+        apeManager.rotation = player.getRotation();
     }        
 }
 
@@ -245,6 +257,7 @@ function rightMouseButtonDown(pickInfo : PickingInfo) {
        || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
         
         if(player.hasBarrel()) {
+            apeManager.playAnimation(ApeAnimations.SWIPING);
             let thrownBarrel = player.throwBarrel(pickInfo.pickedPoint, scene);
             barrelManager.addThrownBarrel(thrownBarrel);
         }
@@ -293,6 +306,7 @@ function checkForBarrelPickup(){
     if( !player.hasBarrel() ) {
         let collided = barrelManager.checkForCollisions(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
         if(collided && collided.length > 0 && collided[0].isPickUpable) {
+            apeManager.playAnimation(ApeAnimations.PUNCH);
             player.pickUpBarrel(collided[0]);
             barrelManager.releaseBarrel(collided[0]);
         }
