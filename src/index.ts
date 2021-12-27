@@ -4,7 +4,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/inspector";
-import { Vector3 } from "@babylonjs/core/Maths/math";
+import { Vector3, Axis } from "@babylonjs/core/Maths/math";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras";
 import { Animation } from "@babylonjs/core";
 
@@ -111,7 +111,6 @@ let player : Player;
 // decals
 let waypointManager = new WaypointManager(scene);
 
-
 let elapsedTime = new ElapsedTime();
 let score = 0;
 
@@ -163,9 +162,10 @@ let apeManager = new ApeManager();
 
 env.setup(scene, () => { 
 
-    apeManager.load(scene);
-
-    player = createPlayer(scene, env); 
+    apeManager.load(scene)
+        .then( () => {
+            player = createPlayer(scene, env, apeManager);
+        });
 
     elapsedTime.start();
 
@@ -184,16 +184,14 @@ env.setup(scene, () => {
 });
 
 
-function createPlayer(scene: Scene, env: Environment) {
-    let playerSize = 1;
-    let walkSpeed = 5/1000; //20 / 1000;  // units per millisecond
+function createPlayer(scene: Scene, env: Environment, apeManager : ApeManager) {
 
     let posX = 31;
     let posZ = -1.5;
     let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
-    let startPosition = new Vector3(posX, posY + playerSize / 2, posZ);
+    let startPosition = new Vector3(posX, posY, posZ);
 
-    player = Player.create(scene, playerSize, walkSpeed);
+    player = Player.create(scene, apeManager, Constants.PLAYER_SPEED);
     player.placePlayerAt(env, startPosition);
 
     return player;
@@ -213,14 +211,6 @@ function movePlayer() {
             apeManager.playAnimation(ApeAnimations.IDLE);
         }
     }       
-
-    // TODO:  do a better job binding the ape to the player
-    apeManager.position = player.getPosition(); 
-    if(player.getRotationQuaternion()) {
-        apeManager.rotationQuaternion = player.getRotationQuaternion();
-    } else {
-        apeManager.rotation = player.getRotation();
-    }        
 }
 
 // set up click detection
@@ -292,7 +282,27 @@ scene.onKeyboardObservable.add( (kbInfo) => {
             let animationIdx : number = kbInfo.event.key.charCodeAt(0) - "0".charCodeAt(0);
             if(animationIdx >= 0 && animationIdx < ApeAnimations.NUM_ANIMATIONS){
                 apeManager.playAnimation(animationIdx);
+            }
+            /*
+            else if( kbInfo.event.key === "q") {
+                player.rotBarrel(Axis.X,15);
             }                
+            else if( kbInfo.event.key === "w") {
+                player.rotBarrel(Axis.Y,15);
+            }                
+            else if( kbInfo.event.key === "e") {
+                player.rotBarrel(Axis.Z,15);
+            }      
+            else if( kbInfo.event.key === "a") {
+                player.moveBarrel(Axis.X,10);
+            }      
+            else if( kbInfo.event.key === "s") {
+                player.moveBarrel(Axis.Y,10);
+            }      
+            else if( kbInfo.event.key === "d") {
+                player.moveBarrel(Axis.Z,10);
+            } 
+            */     
             break;
 
     }

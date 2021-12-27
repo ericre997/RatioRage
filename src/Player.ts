@@ -1,53 +1,43 @@
 import { Scene } from "@babylonjs/core/scene";
-import { Mesh, LinesMesh } from "@babylonjs/core/Meshes";
+import { Mesh, AbstractMesh, LinesMesh } from "@babylonjs/core/Meshes";
 import { NormalMaterial } from "@babylonjs/materials";
 import { Vector3, Axis, Space, Color3, Quaternion } from "@babylonjs/core/Maths/math";
 import { Environment } from "./Environment";
 import { Constants } from "./Constants";
 import { BarrelInstance } from "./BarrelInstance";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
-
+import { ApeManager } from "./ApeManager";
 
 export class Player {
 
-    public readonly playerSize : number;
     public readonly walkSpeed : number;
     public readonly minMoveDistance = .1;
+    public readonly playerSize = 1;
 
     private barrel : BarrelInstance;
 
-    private playerMesh : Mesh;
+    private playerMesh : AbstractMesh;
+    private apeManager : ApeManager;
     private forwardMesh : LinesMesh;
     private upMesh : LinesMesh;
     private rightMesh : LinesMesh;
 
-    private constructor(playerSize: number, walkSpeed: number) {
-        this.playerSize = playerSize;
+    private constructor(apeManager: ApeManager, walkSpeed: number) {
+        this.apeManager = apeManager;
+        this.playerMesh = this.apeManager.root;
         this.walkSpeed = walkSpeed;
     }
 
     public getPosition() : Vector3 {
-        return this.playerMesh.position;
-    }
-
-    public getRotationQuaternion() : Quaternion {
-        return this.playerMesh.rotationQuaternion;
-    }
-
-    public getRotation() : Vector3 {
-        return this.playerMesh.rotation;
+        return this.apeManager.root.position;
     }
 
     public hasBarrel() : boolean { 
         return this.barrel ? true : false;
     }
 
-    public static create(scene : Scene, playerSize: number, walkSpeed: number) {
-        let player = new Player(playerSize, walkSpeed);
-
-        player.playerMesh = Mesh.CreateBox("tmp_player", playerSize, scene)
-        player.playerMesh.material = new NormalMaterial("tmp_player_material", scene);
-        player.playerMesh.parent = null;
+    public static create(scene : Scene, apeManager : ApeManager, walkSpeed: number) {
+        let player = new Player(apeManager, walkSpeed);
 
         player.createAxisLines(scene);
         player.updateAxisLines();
@@ -57,9 +47,17 @@ export class Player {
 
     public pickUpBarrel(barrelInstance: BarrelInstance) {
         this.barrel = barrelInstance;
-        barrelInstance.parent = this.playerMesh;
-        barrelInstance.rotate(Axis.X, -45 * Constants.RADIANS_PER_DEGREE);
-        barrelInstance.position = new Vector3(this.playerSize/2, this.playerSize/2, 0);
+
+        let bone = this.apeManager.getRightHand();
+
+        // for some reason, attaching to the hand bone shrinks it down like crazy.
+        // increase scaling to compensate.
+        barrelInstance.root.scaling = new Vector3(30,30,30);
+        barrelInstance.position = bone.getAbsolutePosition();
+        let node = barrelInstance.root.attachToBone(bone, this.playerMesh);
+        barrelInstance.rotate(Axis.Z, 105 * Constants.RADIANS_PER_DEGREE);
+        barrelInstance.position.y += 20;
+        barrelInstance.position.z += 35;
     }
 
     public throwBarrel(targetPoint: Vector3, scene : Scene) : BarrelInstance{
@@ -118,7 +116,6 @@ export class Player {
 
     public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) : boolean{
         let targetPosition = surfaceTargetPosition.clone();
-        targetPosition.y += this.playerSize / 2;
 
         let distanceFromTarget = Vector3.Distance(this.playerMesh.position, targetPosition);
         if(distanceFromTarget < this.minMoveDistance) {
@@ -137,7 +134,7 @@ export class Player {
         if(heightAtProposed < minDestHeight) {
             return false;
         }
-        proposedPosition.y = heightAtProposed + this.playerSize /2;;
+        proposedPosition.y = heightAtProposed; 
 
         // TODO:  hrmmm... do we really need this?  It's more accurate, but isn't really noticable.
         // adjust distance moved based on height of terrain at proposed location.
@@ -149,7 +146,6 @@ export class Player {
         let finalPosition = adjustedFinalPosition;
         this.placePlayerAt(env, finalPosition);
 
-        //this.updateAxisLines();
         return true;
     }
 
@@ -172,7 +168,6 @@ export class Player {
  
         this.playerMesh.rotate(Axis.Y, angle, Space.WORLD); 
 
-        //this.updateAxisLines();
     }
 
     private createAxisLines(scene : Scene) {
@@ -211,17 +206,6 @@ export class Player {
 
     public placePlayerAt(env: Environment, position: Vector3){
         this.playerMesh.position = position;
-        this.updateAxisLines();
-
-        let surfaceNormal = env.groundMesh.getNormalAtCoordinates(position.x, position.z);
-        // TODO:  hrmmm... there is some kind of bug here that will occasionally cause the rotation to go wacky.
-        // just gonna comment it out for now since the final model won't need it anyway.  Would be good to understand
-        // what's up though.  
-
-    //    let rotationAxis = Vector3.Cross(surfaceNormal, this.playerMesh.up).normalize();
-    //    let angle = Math.acos(Vector3.Dot(surfaceNormal, this.playerMesh.up));
-    //    this.playerMesh.rotate(rotationAxis, angle); 
-
         this.updateAxisLines();
     }
     

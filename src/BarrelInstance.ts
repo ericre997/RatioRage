@@ -1,5 +1,6 @@
+import { Node } from "@babylonjs/core";
 import { Scene } from "@babylonjs/core/scene";
-import { Mesh, } from "@babylonjs/core/Meshes";
+import { Mesh, AbstractMesh} from "@babylonjs/core/Meshes";
 import { Vector3 } from "@babylonjs/core/Maths/math";
 import { ParticleSystemSet } from "@babylonjs/core/Particles";
 import { ExplodableMeshInstance } from "./ExplodableMeshInstance";
@@ -38,8 +39,14 @@ export class BarrelInstance {
         this.root.position.z = pos.z;
     }
 
-    public set parent(mesh : Mesh) {
-        this.root.parent = mesh;
+    public get parent() : Node {
+        return this.root.parent;
+    }
+    
+    public set parent(node : Node) {
+        this.root.setParent(node);
+        //this.root.parent = node;
+        //this.root.parent = mesh;
     }
 
     public rotate(axis : Vector3, radians : number) {
@@ -83,7 +90,6 @@ export class BarrelInstance {
         });
 
         this.particleSystemSet.start();
-        //this.particleSystemSet.start();
 
         this.explodeTime = Date.now();        
     }
