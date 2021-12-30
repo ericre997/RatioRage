@@ -22,10 +22,14 @@ export class Player {
     private upMesh : LinesMesh;
     private rightMesh : LinesMesh;
 
+    private throwInProgress : boolean = false;
+
     private constructor(apeManager: ApeManager, walkSpeed: number) {
         this.apeManager = apeManager;
         this.playerMesh = this.apeManager.root;
         this.walkSpeed = walkSpeed;
+
+        this.apeManager.onThrowCpltCallback = this.onThrowComplete.bind(this);
     }
 
     public getPosition() : Vector3 {
@@ -39,8 +43,8 @@ export class Player {
     public static create(scene : Scene, apeManager : ApeManager, walkSpeed: number) {
         let player = new Player(apeManager, walkSpeed);
 
-        player.createAxisLines(scene);
-        player.updateAxisLines();
+//        player.createAxisLines(scene);
+//        player.updateAxisLines();
 
         return player;
     }
@@ -62,13 +66,28 @@ export class Player {
         this.apeManager.playAnimation(ApeAnimations.PUNCH);
     }
 
-    public throwBarrel(targetPoint: Vector3, scene : Scene) : BarrelInstance{
 
-        // point player at target
-        this.pointPlayerAt(targetPoint);
+    public throwBarrel(targetPoint : Vector3, scene: Scene, callback: (thrownBarrel:BarrelInstance) => void){
+        
+        if(!this.throwInProgress){
+            this.throwInProgress = true;
 
-        // kick off the thrown animation
-        this.apeManager.playAnimation(ApeAnimations.SWIPING);
+            // point player at target
+            this.pointPlayerAt(targetPoint);
+
+            // kick off the thrown animation
+            this.apeManager.playThrowAnimation( () => {
+                let thrownBarrel = this.throwBarrelInternal(targetPoint, scene);
+                callback(thrownBarrel)});
+        }            
+
+    }
+
+    private onThrowComplete() {
+        this.throwInProgress = false;
+    }
+
+    private throwBarrelInternal(targetPoint: Vector3, scene : Scene) : BarrelInstance{
 
         // get world position of barrel.  we will need to set after deparenting
         let scale = new Vector3();
@@ -122,7 +141,15 @@ export class Player {
         return thisBarrel;
     }
 
+
     public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {
+        // don't update position or animations while a throw is in progress
+        if (this.throwInProgress) {
+            return;
+        }
+
+        this.pointPlayerAt(surfaceTargetPosition);
+
         let ret = this.tryMovePlayer(env, surfaceTargetPosition,deltaTime,minDestHeight);
         if (ret) {
             this.apeManager.playAnimation(ApeAnimations.RUNNING);
@@ -186,7 +213,7 @@ export class Player {
         this.playerMesh.rotate(Axis.Y, angle, Space.WORLD); 
 
     }
-
+/*
     private createAxisLines(scene : Scene) {
         const LINE_LENGTH = 3;
         let points = new Array<Vector3>();
@@ -220,10 +247,10 @@ export class Player {
         points[1] = this.playerMesh.position.add(this.playerMesh.right.scale(LINE_LENGTH));
         this.rightMesh = Mesh.CreateLines(null, points, null, null, this.rightMesh);
     }
-
+*/
     public placePlayerAt(env: Environment, position: Vector3){
         this.playerMesh.position = position;
-        this.updateAxisLines();
+//        this.updateAxisLines();
     }
     
     /*  Hmm... this is pretty jerky.  Also, the player seems to sometimes be able to fall through the map.

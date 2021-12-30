@@ -34,6 +34,9 @@ export class ApeManager {
     private currentAnimation : number = this.defaultAnimation;
     private nextAnimation: number = this.defaultAnimation;
     
+    public onThrowCpltCallback : () => void = null;
+    public onThrowStartedCallback: () => void = null;
+
     public getRightHand() : Bone {
         let bones = this.skeletons[0].bones;
         for(let i = 0; i < bones.length; i++ ) {
@@ -62,12 +65,27 @@ export class ApeManager {
             case ApeAnimations.SWIPING:                
             {
                 let animationGroup = this.animationGroups[animationId];
-                return (animationGroup.to - animationGroup.from) * .4
+                return (animationGroup.to - animationGroup.from) * .4;
             }
             default:
-                return 0;
+                return this.animationGroups[animationId].from;
         }
     }
+
+    private getAnimationEndFrame(animationId: number) : number {
+        switch (animationId) {
+            case ApeAnimations.PUNCH:
+            case ApeAnimations.JUMP_ATTACK:
+            case ApeAnimations.SWIPING:                
+            {
+                let animationGroup = this.animationGroups[animationId];
+                return (animationGroup.to - animationGroup.from) * .7;
+            }
+            default:
+                return this.animationGroups[animationId].to;
+        }
+    }
+
 
     public load(scene: Scene) : Promise<any> {
     
@@ -89,8 +107,19 @@ export class ApeManager {
                             this.playAnimationInternal(this.nextAnimation);
                             this.nextAnimation = this.defaultAnimation; 
                         });
-                    }            
+                    }        
+                    if(i == ApeAnimations.SWIPING) {
+                        this.animationGroups[i].onAnimationGroupPlayObservable.add( () => {
+                            this.onThrowStarted();
+                        });
+
+                        this.animationGroups[i].onAnimationGroupEndObservable.add( () => {
+                            this.onThrowComplete();
+                        });
+                    }    
                 }
+
+                scene.onBeforeAnimationsObservable.add(() => this.onBeforeAnimation());
 
                 // start up default animation
                 this.playAnimationInternal(this.defaultAnimation);
@@ -101,6 +130,24 @@ export class ApeManager {
                 this.root.scaling.z = Constants.APE_SCALING;
             });
     }            
+
+
+    public playThrowAnimation( callback : () => void) {
+        this.onThrowStartedCallback = callback;
+        this.playAnimation(ApeAnimations.SWIPING);
+    }
+
+    public onThrowStarted() {
+        //if(this.onThrowStartedCallback){
+        //    this.onThrowStartedCallback();
+        //    this.onThrowStartedCallback = null;
+        //}
+    }
+    public onThrowComplete() {
+        if(this.onThrowCpltCallback) {
+            this.onThrowCpltCallback();
+        }
+    }
 
     public playAnimation(animationToStart: number){
 
@@ -123,15 +170,28 @@ export class ApeManager {
     public playAnimationInternal(animationToStart: number) {
 
         this.animationGroups[this.currentAnimation].setWeightForAllAnimatables(0);
-        this.animationGroups[animationToStart].reset();
+        this.currentAnimation = animationToStart;
+        //this.animationGroups[animationToStart].reset();
         this.animationGroups[animationToStart].start(this.isLoopingAnimation(animationToStart), 
                                                      1, 
-                                                     this.getAnimationStartFrame(animationToStart));
+                                                     this.getAnimationStartFrame(animationToStart),
+                                                     this.getAnimationEndFrame(animationToStart));
 
         this.animationGroups[this.currentAnimation].setWeightForAllAnimatables(0);
         this.animationGroups[animationToStart].setWeightForAllAnimatables(1);
+    }
 
-        this.currentAnimation = animationToStart;
+    private onBeforeAnimation() {
+        if (this.currentAnimation == ApeAnimations.SWIPING &&
+            this.onThrowStartedCallback) {
+            // currently, we are running this one from .4 to .7
+            let animationGroup = this.animationGroups[this.currentAnimation];
+            let targetFrame = (animationGroup.to - animationGroup.from) * .4;  
+            if (animationGroup.animatables[0].masterFrame >= targetFrame) {
+                this.onThrowStartedCallback();
+                this.onThrowStartedCallback = null;
+            }                
+        }
     }
 }
 

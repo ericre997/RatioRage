@@ -39,6 +39,7 @@ import { CannonJSPlugin } from "@babylonjs/core/Physics"
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { RatioManager } from "./RatioManager";
 import { BarrelManager } from "./BarrelManager";
+import { BarrelInstance } from "./BarrelInstance";
 import { Constants } from "./Constants"
 import { Shockwave } from "./Shockwave";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
@@ -202,8 +203,9 @@ function rightMouseButtonDown(pickInfo : PickingInfo) {
        || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
         
         if(player.hasBarrel()) {
-            let thrownBarrel = player.throwBarrel(pickInfo.pickedPoint, scene);
-            barrelManager.addThrownBarrel(thrownBarrel);
+            player.throwBarrel(pickInfo.pickedPoint, scene, (thrownBarrel: BarrelInstance) => {
+                barrelManager.addThrownBarrel(thrownBarrel);
+            });
         }
     }
 }
