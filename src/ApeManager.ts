@@ -35,7 +35,7 @@ export class ApeManager {
     private nextAnimation: number = this.defaultAnimation;
     
     public onThrowCpltCallback : () => void = null;
-    public onThrowStartedCallback: () => void = null;
+    public releaseBarrelCallback: () => void = null;
 
     public getRightHand() : Bone {
         let bones = this.skeletons[0].bones;
@@ -133,7 +133,7 @@ export class ApeManager {
 
 
     public playThrowAnimation( callback : () => void) {
-        this.onThrowStartedCallback = callback;
+        this.releaseBarrelCallback = callback;
         this.playAnimation(ApeAnimations.SWIPING);
     }
 
@@ -183,13 +183,13 @@ export class ApeManager {
 
     private onBeforeAnimation() {
         if (this.currentAnimation == ApeAnimations.SWIPING &&
-            this.onThrowStartedCallback) {
+            this.releaseBarrelCallback) {
             // currently, we are running this one from .4 to .7
             let animationGroup = this.animationGroups[this.currentAnimation];
             let targetFrame = (animationGroup.to - animationGroup.from) * .4;  
             if (animationGroup.animatables[0].masterFrame >= targetFrame) {
-                this.onThrowStartedCallback();
-                this.onThrowStartedCallback = null;
+                this.releaseBarrelCallback();
+                this.releaseBarrelCallback = null;
             }                
         }
     }
