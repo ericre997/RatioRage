@@ -5,24 +5,20 @@ import { Bone, AnimationGroup, Skeleton, TransformNode, Quaternion } from "@baby
 import { Vector3 } from "@babylonjs/core/Maths/math";
 import { Constants } from "./Constants";
 
+// NOTE: enum member names are the names of the Mixamo animations.
 export class ApeAnimations {
     public static readonly BREATHING_IDLE : number = 0 ;
     public static readonly CHEERING : number = 1;
-    public static readonly IDLE : number = 2;
+    public static readonly IDLE : number = 2;           // use for default idle
     public static readonly JUMP_ATTACK : number = 3;
-    public static readonly PUNCH : number = 4;
+    public static readonly PUNCH : number = 4;          // use for picking up barrel
     public static readonly ROARING : number = 5;
-    public static readonly RUNNING : number = 6;
-    public static readonly SWIPING : number = 7;
+    public static readonly RUNNING : number = 6;        // use for movement
+    public static readonly SWIPING : number = 7;        // use for throwing
     public static readonly WALKING : number = 8;
     public static readonly NUM_ANIMATIONS : number = 9;
 }
 
-
-
-// TODO:  instead of cloning rotation and postion properties, it might
-// be easier to just share the same vector/quaternion between the player root and the ape mesh.
-// consider adding 'bind()' method to do this.  
 
 export class ApeManager {
     private animationGroups : AnimationGroup[];

@@ -45,6 +45,8 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { ApeAnimations, ApeManager } from "./ApeManager";
 import { KeyboardEventTypes } from "@babylonjs/core";
+import { ShockwaveManager } from "./ShockwaveManager";
+import { Score } from "./Score";
 
 /// begin code!
 
@@ -101,9 +103,11 @@ let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
-
+let score = new Score();
 let barrelManager = new BarrelManager();
 let ratioManager  = new RatioManager();
+let shockwaveManager = new ShockwaveManager(scene, ratioManager, barrelManager, score);
+let apeManager = new ApeManager();
 
 let env = new Environment();
 let player : Player;
@@ -112,41 +116,23 @@ let player : Player;
 let waypointManager = new WaypointManager(scene);
 
 let elapsedTime = new ElapsedTime();
-let score = 0;
 
-// shockwaves
-let shockwaves = new Array<Shockwave>();
+////////////////////////////////////////////////////////////////////
+// create environment and game objects
+////////////////////////////////////////////////////////////////////
 
-//let shockwaveMat = new StandardMaterial("swmat", scene);
-//shockwaveMat.diffuseColor = new Color3(1,1,1);
-function createShockwave(position : Vector3) {
-    let pos = position.clone();
-    pos.y += 1;
-    let newShockwave = new Shockwave(pos, 10, 700, Date.now());
-    // newShockwave.createDebugMesh(shockwaveMat, scene);
-    shockwaves.push(newShockwave);
-}
+function createPlayer(scene: Scene, env: Environment, apeManager : ApeManager) {
 
-function updateShockwaves() {
-    let now = Date.now();
-    for(let i = shockwaves.length-1; i >= 0; i--) {
-        let radius = shockwaves[i].getCurrentSize(now);
-        if(radius < 0) {
-            shockwaves.splice(i, 1);
-        } else {
-            let d2 = radius * radius;
-            let ratios = ratioManager.checkForCollisions(shockwaves[i].position, d2);
-            for(let i = 0; i < ratios.length; i++) {
-                explodeRatioInstance(ratios[i]);
-            }
-            let barrels = barrelManager.checkForCollisions(shockwaves[i].position, d2)
-            for(let i = 0; i < barrels.length; i++) {
-                explodeBarrelInstance(barrels[i]);
-            }
-        }            
-    }
-}
+    let posX = 31;
+    let posZ = -1.5;
+    let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
+    let startPosition = new Vector3(posX, posY, posZ);
 
+    player = Player.create(scene, apeManager, Constants.PLAYER_SPEED);
+    player.placePlayerAt(env, startPosition);
+
+    return player;
+ }
 
 function getFlattenedRatioPositions() : Vector3[] {
     let positions = new Array<Vector3>();
@@ -158,7 +144,6 @@ function getFlattenedRatioPositions() : Vector3[] {
     return positions;
 }
 
-let apeManager = new ApeManager();
 
 env.setup(scene, () => { 
 
@@ -182,36 +167,6 @@ env.setup(scene, () => {
             startRenderLoop();
         });
 });
-
-
-function createPlayer(scene: Scene, env: Environment, apeManager : ApeManager) {
-
-    let posX = 31;
-    let posZ = -1.5;
-    let posY = env.groundMesh.getHeightAtCoordinates(posX, posZ);
-    let startPosition = new Vector3(posX, posY, posZ);
-
-    player = Player.create(scene, apeManager, Constants.PLAYER_SPEED);
-    player.placePlayerAt(env, startPosition);
-
-    return player;
- }
-
-
-function movePlayer() {
-    // TODO:  easing
-    // TODO:  allow for multiple waypoints (i.e. remove current waypoint if hit?)
-    // TODO:  adjust speed based on terrain?
-    // TODO:  go around obstacles.
-    let waypoint = waypointManager.getNextWaypoint();
-    if(waypoint) {
-        if(player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), Constants.MIN_D2_PLAYER_ELEVATION)){
-            apeManager.playAnimation(ApeAnimations.RUNNING);
-        } else {
-            apeManager.playAnimation(ApeAnimations.IDLE);
-        }
-    }       
-}
 
 // set up click detection
 
@@ -247,7 +202,6 @@ function rightMouseButtonDown(pickInfo : PickingInfo) {
        || pickInfo.pickedMesh.name.startsWith(Constants.RATIO_WHOLE_PREFIX)) {
         
         if(player.hasBarrel()) {
-            apeManager.playAnimation(ApeAnimations.SWIPING);
             let thrownBarrel = player.throwBarrel(pickInfo.pickedPoint, scene);
             barrelManager.addThrownBarrel(thrownBarrel);
         }
@@ -306,8 +260,23 @@ scene.onKeyboardObservable.add( (kbInfo) => {
             break;
 
     }
-    });
+});
 
+/////////////////////////////////////////////////////////////////
+// main game loop and support methods.
+/////////////////////////////////////////////////////////////////
+
+
+function movePlayer() {
+    // TODO:  easing
+    // TODO:  allow for multiple waypoints (i.e. remove current waypoint if hit?)
+    // TODO:  adjust speed based on terrain?
+    // TODO:  go around obstacles.
+    let waypoint = waypointManager.getNextWaypoint();
+    if(waypoint) {
+        player.updatePlayerPosition(env, waypoint.position, engine.getDeltaTime(), Constants.MIN_D2_PLAYER_ELEVATION);
+    }       
+}
 
 // TODO:  can we re-write the buildColorMap routine to return a promise? 
 // TODO:  trees look bad.  Tweak materials and lighting for better shading on trunk?
@@ -316,7 +285,6 @@ function checkForBarrelPickup(){
     if( !player.hasBarrel() ) {
         let collided = barrelManager.checkForCollisions(player.getPosition(), Constants.MIN_D2_PLAYER_BARREL_PICKUP);
         if(collided && collided.length > 0 && collided[0].isPickUpable) {
-            apeManager.playAnimation(ApeAnimations.PUNCH);
             player.pickUpBarrel(collided[0]);
             barrelManager.releaseBarrel(collided[0]);
         }
@@ -332,23 +300,9 @@ function updateThrownBarrels() {
            || ratioManager.checkForCollisions(thisBarrel.position, Constants.MIN_D2_BARREL_RATIO_EXPLODE).length > 0) {
 
                barrelManager.releaseThrownBarrel(thisBarrel);
-               explodeBarrelInstance(thisBarrel);
+               shockwaveManager.explodeBarrelInstance(thisBarrel);
            }
     }
-}
-
-function explodeRatioInstance(ratioInstance : RatioInstance) {
-    ratioInstance.explode(scene);
-    createShockwave(ratioInstance.position);
-    if(ratioInstance.isEquivalent) {
-        score++;
-    }
-}
-
-function explodeBarrelInstance(barrelInstance) {
-    barrelInstance.explode(scene);
-    createShockwave(barrelInstance.position);
-    barrelManager.queueBarrelForDisposal(barrelInstance);
 }
 
 function startRenderLoop() {
@@ -358,18 +312,18 @@ function startRenderLoop() {
         movePlayer();
         checkForBarrelPickup();
         updateThrownBarrels();
-        updateShockwaves();
+        shockwaveManager.updateShockwaves();
 
         let collided = ratioManager.checkForCollisions(player.getPosition(), Constants.MIN_D2_ANY_RATIO_COLLISION);
         if(collided && collided.length > 0) {
-            explodeRatioInstance(collided[0]);
+            shockwaveManager.explodeRatioInstance(collided[0]);
         }
         
         ratioManager.updateRatios(engine.getDeltaTime());
         barrelManager.disposeBarrels();
 
         gameOverlay.updateElapsedTime(elapsedTime);
-        gameOverlay.updateScore(score);
+        gameOverlay.updateScore(score.getScore());
 
         scene.render();
     });

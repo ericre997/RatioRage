@@ -6,7 +6,7 @@ import { Environment } from "./Environment";
 import { Constants } from "./Constants";
 import { BarrelInstance } from "./BarrelInstance";
 import { PhysicsImpostor } from "@babylonjs/core/Physics";
-import { ApeManager } from "./ApeManager";
+import { ApeManager, ApeAnimations } from "./ApeManager";
 
 export class Player {
 
@@ -58,9 +58,17 @@ export class Player {
         barrelInstance.rotate(Axis.Z, 105 * Constants.RADIANS_PER_DEGREE);
         barrelInstance.position.y += 20;
         barrelInstance.position.z += 35;
+
+        this.apeManager.playAnimation(ApeAnimations.PUNCH);
     }
 
     public throwBarrel(targetPoint: Vector3, scene : Scene) : BarrelInstance{
+
+        // point player at target
+        this.pointPlayerAt(targetPoint);
+
+        // kick off the thrown animation
+        this.apeManager.playAnimation(ApeAnimations.SWIPING);
 
         // get world position of barrel.  we will need to set after deparenting
         let scale = new Vector3();
@@ -114,7 +122,16 @@ export class Player {
         return thisBarrel;
     }
 
-    public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) : boolean{
+    public updatePlayerPosition(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) {
+        let ret = this.tryMovePlayer(env, surfaceTargetPosition,deltaTime,minDestHeight);
+        if (ret) {
+            this.apeManager.playAnimation(ApeAnimations.RUNNING);
+        } else {
+            this.apeManager.playAnimation(ApeAnimations.IDLE);
+        }
+    }        
+
+    private tryMovePlayer(env : Environment, surfaceTargetPosition: Vector3, deltaTime: number, minDestHeight: number) : boolean{
         let targetPosition = surfaceTargetPosition.clone();
 
         let distanceFromTarget = Vector3.Distance(this.playerMesh.position, targetPosition);
