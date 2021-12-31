@@ -21,6 +21,9 @@ export class GameOverlay {
     private targetRatioSeparator : Parallelogram;
     private targetDenominator : TextBlock;
 
+    private islandNameLabel : TextBlock;
+    private islandName : TextBlock;
+
     constructor(advancedTexture : AdvancedDynamicTexture) {
         this.advancedTexture = advancedTexture;
         
@@ -49,8 +52,18 @@ export class GameOverlay {
             this.targetRatioSeparator = this.createTargetRatioSeparator(this.advancedTexture, 50 * scale, 7 * scale, hCenter, height - 43 * scale);
             this.targetDenominator = this.createTargetRatioTextBlock(this.advancedTexture, fontSize, outlineWidth, hCenter, height - 40 * scale);
         }
+        {
+            let fontSize = 30 * scale;
+            let outlineWidth = 3 * scale;
+            this.islandNameLabel = this.createIslandNameTextBlock(this.advancedTexture, fontSize, outlineWidth, 10 * scale, 10 * scale);
+            this.islandNameLabel.text = this.addHairSpacing("Current Level:")
+            this.islandName = this.createIslandNameTextBlock(this.advancedTexture, fontSize, outlineWidth, 200 * scale, 10 * scale);
+        }
     }
 
+    public updateIslandName(islandName : string) {
+        this.islandName.text = this.addHairSpacing(islandName);
+    }
     public updateElapsedTime(elapsedTime: ElapsedTime) {
         this.elapsedTime.text = this.addHairSpacing(elapsedTime.toString());
     }
@@ -72,6 +85,26 @@ export class GameOverlay {
         let textBlock = new TextBlock();
 
         textBlock.color = "white";
+        textBlock.fontSize = fontSize; 
+        textBlock.fontFamily = "Bangers";
+        
+        textBlock.outlineColor = "black";
+        textBlock.outlineWidth = outlineWidth;  
+        
+        textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        textBlock.left = left;
+        textBlock.top = top; 
+        
+        ui.addControl(textBlock);
+
+        return textBlock;    
+    }
+
+    private createIslandNameTextBlock(ui: AdvancedDynamicTexture, fontSize: number, outlineWidth: number, left: number, top: number) : TextBlock {
+        let textBlock = new TextBlock();
+
+        textBlock.color = "red";
         textBlock.fontSize = fontSize; 
         textBlock.fontFamily = "Bangers";
         

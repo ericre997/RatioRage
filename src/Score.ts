@@ -6,6 +6,10 @@ export class Score {
         this.score ++;
     }
 
+    public decrement() {
+        this.score --;
+    }
+    
     public getScore() { 
         return this.score;
     }

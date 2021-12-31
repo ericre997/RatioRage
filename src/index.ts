@@ -100,7 +100,7 @@ pipeline.bloomScale = 0.5;
 
 // set up HUD
 let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-let diagnostics = new Diagnostics(advancedTexture);
+//let diagnostics = new Diagnostics(advancedTexture);
 let gameOverlay = new GameOverlay(advancedTexture);
 
 // create objects in envionment
@@ -161,8 +161,9 @@ env.setup(scene, () => {
             return barrelManager.initialize(env, ratioPositions, scene);
         })
         .then( () => {
-            diagnostics.updateEquivalentRatios(ratioManager.equivalentRatios);
-            diagnostics.updateNonEquivalentRatios(ratioManager.nonEquivalentRatios);
+            //diagnostics.updateEquivalentRatios(ratioManager.equivalentRatios);
+            //diagnostics.updateNonEquivalentRatios(ratioManager.nonEquivalentRatios);
+            gameOverlay.updateIslandName("Grunch Island!");
             gameOverlay.updateTargetRatio(ratioManager.targetRatio);
     
             startRenderLoop();
@@ -189,7 +190,7 @@ function leftMouseButtonDown(pickInfo : PickingInfo) {
         let normal = env.groundMesh.getNormalAtCoordinates(position.x, position.z);
         let color = env.colorMap.getColorAtPosition(pickInfo.pickedPoint);
 
-        diagnostics.update(position, color);
+        //diagnostics.update(position, color);
 
         waypointManager.buildDecal(env.groundMesh, position, normal);
 

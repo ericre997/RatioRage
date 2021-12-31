@@ -63,7 +63,10 @@ export class ShockwaveManager {
         
         if(ratioInstance.isEquivalent) {
             this.score.increment();
+        } else {
+            this.score.decrement();
         }
+
     }
     
     public explodeBarrelInstance(barrelInstance : BarrelInstance) {
