@@ -121,13 +121,12 @@ export class GameOverlay {
         return textBlock;    
     }
 
-    // the 1 and 7 in bangers look virtually identical, so we use Luckiest Guy here.
+    // the 1 and 7 in bangers look virtually identical, so we use Fugaz One here.
     private createTargetRatioTextBlock(ui: AdvancedDynamicTexture, fontSize: number, outlineWidth: number, left: number, top: number) : TextBlock {
         let textBlock = new TextBlock();
 
         textBlock.color = "lime";
         textBlock.fontSize = fontSize;
-        //textBlock.fontFamily = "Luckiest Guy";
         textBlock.fontFamily = "Fugaz One";
         textBlock.outlineColor = "black";
         textBlock.outlineWidth = outlineWidth;
